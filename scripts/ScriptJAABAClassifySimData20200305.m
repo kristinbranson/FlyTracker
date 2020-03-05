@@ -47,11 +47,36 @@ simexpdirs = PrepareSimTrx4JAABA(trxfiles,expdir0,...
   'dataloc_params',dataloc_params,...
   'nooverwrite',false);
 
-% sanity check
-pd = load(fullfile(simexpdirs{moviei},dataloc_params.perframedir,'velmag_ctr.mat'));
-sim_mean_velmag_ctr = nanmean([pd.data{:}]);
-pd = load(fullfile(testdirs{moviei},dataloc_params.perframedir,'velmag_ctr.mat'));
-mean_velmag_ctr = nanmean([pd.data{:}]);
+%% sanity check
+
+perframefn = 'velmag_ctr';
+pd0 = load(fullfile(expdir0,dataloc_params.perframedir,[perframefn,'.mat']));
+pfd = [pd0.data{:}];
+maxvelmag = prctile(pfd,99);
+edges = linspace(0,maxvelmag,101);
+ctrs = (edges(1:end-1)+edges(2:end))/2;
+counts = hist(pfd,ctrs);
+figure(123);
+clf;
+plot(ctrs,counts/sum(counts),'k-','LineWidth',2);
+hold on;
+[~,n] = fileparts(expdir0);
+legs = {['real ',n]};
+
+for moviei = 1:numel(simexpdirs),
+  [~,n] = fileparts(simexpdirs{moviei});
+  pd = load(fullfile(simexpdirs{moviei},dataloc_params.perframedir,[perframefn,'.mat']));
+  for i = 1:numel(pd.data),
+    pfd = pd.data{i};
+    counts = hist(pfd,ctrs);
+    plot(ctrs,counts/sum(counts));
+    legs{end+1} = sprintf('fly%d_%s',i,n);
+  end
+  %mean_velmag_ctr = nanmean([pd.data{:}]);
+end
+  
+legend(legs,'interpreter','none');
+xlabel(perframefn);
 
 %% run chase classifier
 
@@ -61,30 +86,36 @@ for moviei = 1:numel(simexpdirs),
   JAABADetect(simexpdirs{moviei},'jabfiles',{jabfile});
 end
 
+jd = loadAnonymous(jabfile);
 simfractime = nan(1,numel(simexpdirs));
+simfractime_fly = cell(1,numel(simexpdirs));
 for moviei = 1:numel(simexpdirs),
   
-  fscorefile = fullfile(simexpdirs{moviei},jd.file.scorefilename);
+  fscorefile = fullfile(simexpdirs{moviei},jd.file.scorefilename{1});
   sd = load(fscorefile);
   [~,expname] = fileparts(simexpdirs{moviei});
   n = 0;
   d = 0;
   for i = 1:numel(sd.allScores.postprocessed),
-    n = n + nnz(sd.allScores.postprocessed{i}==1);
-    d = d + nnz(~isnan(sd.allScores.postprocessed{i}));
+    n1 = nnz(sd.allScores.postprocessed{i}==1);
+    d1 = nnz(~isnan(sd.allScores.postprocessed{i}));
+    n = n + n1;
+    d = d + d1;
+    simfractime_fly{moviei}(i) = n1/d1;
   end
   fractime = n / d;
   simfractime(moviei) = fractime;
   
   fprintf('%d (%s): fractime %s: %f\n',moviei,expname,...
     jd.behaviors.names{1},simfractime(moviei));
+  fprintf('Per fly:');
+  for i = 1:numel(sd.allScores.postprocessed),
+    fprintf(' %f',simfractime_fly{moviei}(i));
+  end
+  fprintf('\n');
   
 end
 
-figure(346);
-clf
-boxplot([ffractime,simfractime],[ones(size(ffractime)),ones(size(simfractime))+1],...
-  'labels',{'Real','Simulated'});
 % plot(cfractime,ffractime,'ko','MarkerFaceColor','k');
 % xlabel('Frac. time Ctrax');
 % ylabel('Frac. time FlyTracker');
@@ -96,4 +127,4 @@ boxplot([ffractime,simfractime],[ones(size(ffractime)),ones(size(simfractime))+1
 % axis([lim,lim]);
 % hold on;
 % plot(lim,lim,'c-');
-box off;
+%box off;
