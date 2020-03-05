@@ -20,9 +20,14 @@ function flag = tracker_job(type, varargin)
 end
 
 % Compute background model
-function flag = tracker_job_calibrate(f_vid, f_bg, f_calib, options, parent_calib, vinfo)
+function flag = tracker_job_calibrate(f_vid, f_bg, f_calib, options, parent_calib, vinfo, force_calib)
+
+  if ~exist('force_calib','var')
+    force_calib = false;
+  end
+
   flag = 0;
-  if ~exist(f_bg,'file')
+  if force_calib || ~exist(f_bg,'file')
     % open info file
     if nargin < 5 || isempty(parent_calib)
         D = load(f_calib); parent_calib = D.calib;
@@ -59,7 +64,7 @@ function flag = tracker_job_calibrate(f_vid, f_bg, f_calib, options, parent_cali
     save(f_bg,'bg');
   end
   % write calib-file
-  if ~exist(f_calib,'file')
+  if force_calib || ~exist(f_calib,'file')
       % initialize to be the same as parent
       calib = parent_calib;
       % load background
@@ -81,6 +86,14 @@ function flag = tracker_job_calibrate(f_vid, f_bg, f_calib, options, parent_cali
       calib.r = r;
       calib.w = w;
       calib.h = h;
+      if isfield(parent_calib,'arena_r_mm'),
+        calib.PPM = calib.r / parent_calib.arena_r_mm;
+      elseif isfield(parent_calib,'arena_w_mm'),
+        calib.PPM = calib.w / parent_calib.arena_w_mm;
+      elseif isfield(parent_calib,'arena_h_mm'),
+        calib.PPM = calib.h / parent_calib.arena_h_mm;
+      end
+        
       masks = cell(1,size(centers,1));
       rois = cell(1,size(centers,1));
       full_mask = zeros(size(calib.full_mask));
@@ -171,6 +184,7 @@ function flag = tracker_job_process(f_vid, f_bg, f_calib, f_trks, fr, vinfo)
       if count_guess < calib.n_flies && count_guess == fert_guess
           calib.n_flies = count_guess;
       end
+      fprintf('n. flies = %d\n',calib.n_flies);
       % match detections into tracklets
       trks = track_match(dets_c,calib,chamber_str);
       if isnumeric(trks) && ~trks, return; end
