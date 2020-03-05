@@ -2,10 +2,10 @@
 
 %% set up path
 
-addpath /groups/branson/home/bransonk/behavioranalysis/code/Jdetect/Jdetect/perframe;
 addpath /groups/branson/home/bransonk/behavioranalysis/code/Jdetect/Jdetect/misc;
 addpath /groups/branson/home/bransonk/behavioranalysis/code/Jdetect/Jdetect/filehandling;
 addpath(genpath('/groups/branson/home/bransonk/tracking/code/FlyTracker-1.0.5'));
+fbadir = '/groups/branson/bransonlab/projects/olympiad/FlyBowlAnalysis';
 
 %% locations of files
 
@@ -15,7 +15,7 @@ rootoutdir = '/groups/branson/home/bransonk/behavioranalysis/data/JAABASim';
 rootsimtestdir = '/groups/branson/home/imd/Documents/janelia/research/fly_behaviour_sim/71g01/trx';
 %rootsimtestdir = '/groups/branson/home/imd/Documents/janelia/research/FlyTrajPred_v4/pytorch/trx';
 trxfilestrs = {
-  'rnn50_trx_0t0_30320t1_epoch50000_SMSF_full_100hid_lr0.010000_testvideo0.mat'
+  'rnn50_trx_0t0_Nonet1_epoch200000_LOO_full_100hid_lr0.010000_testvideo0.mat'
 %   'rnn50_trx_0t0_1000t1_epoch100000_SMSF_videotypev2_102hid_lr0.010000_testvideo0.mat'
 %   'rnn50_trx_0t0_30320t1_epoch100000_SMSF_videotypev2_102hid_lr0.010000_testvideo0.mat'
 %   'rnn50_trx_0t0_30320t1_epoch100000_SMSF_videotypev2_102hid_lr0.010000_testvideo1.mat'
@@ -35,9 +35,17 @@ trxfiles = cellfun(@(x) fullfile(rootsimtestdir,x),trxfilestrs,'Uni',0);
 expdir0 = '/groups/branson/home/bransonk/behavioranalysis/code/SSRNN/SSRNN/Data/bowl/GMR_71G01_AE_01_TrpA_Rig1Plate15BowlA_20120316T144027';
 
 %% compute per-frame features
+
+addpath(fbadir);
+
+protocol = 'current';
+dataloc_params = ReadParams(fullfile(fbadir,'settings',protocol,'dataloc_params.txt'));
+dataloc_params.flytrackertrackstr = 'movie-track.mat';
+
 simexpdirs = PrepareSimTrx4JAABA(trxfiles,expdir0,...
   'rootoutdir',rootoutdir,...
-  'dataloc_params',dataloc_params);
+  'dataloc_params',dataloc_params,...
+  'nooverwrite',false);
 
 % sanity check
 pd = load(fullfile(simexpdirs{moviei},dataloc_params.perframedir,'velmag_ctr.mat'));
@@ -46,6 +54,8 @@ pd = load(fullfile(testdirs{moviei},dataloc_params.perframedir,'velmag_ctr.mat')
 mean_velmag_ctr = nanmean([pd.data{:}]);
 
 %% run chase classifier
+
+addpath /groups/branson/home/bransonk/behavioranalysis/code/Jdetect/Jdetect/perframe;
 
 for moviei = 1:numel(simexpdirs),
   JAABADetect(simexpdirs{moviei},'jabfiles',{jabfile});

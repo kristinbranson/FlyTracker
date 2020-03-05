@@ -4,12 +4,13 @@ if ~iscell(trxfiles),
   trxfiles = {trxfiles};
 end
 
-[rootoutdir,dataloc_params,analysis_protocol,settingsdir,forcecompute] = ...
+[rootoutdir,dataloc_params,analysis_protocol,settingsdir,forcecompute,nooverwrite] = ...
   myparse(varargin,'rootoutdir','',...
   'dataloc_params',[],...
   'analysis_protocol','current',...
   'settingsdir','/groups/branson/bransonlab/projects/olympiad/FlyBowlAnalysis/settings',...
-  'forcecompute',false);
+  'forcecompute',false,...
+  'nooverwrite',false);
 
 if isempty(dataloc_params),
   dataloc_params = ReadParams(fullfile(settingsdir,analysis_protocol,'dataloc_params.txt'));
@@ -33,6 +34,10 @@ end
 for moviei = 1:numel(outexpdirs),
   if ~exist(outexpdirs{moviei},'dir'),
     mkdir(outexpdirs{moviei});
+  else
+    if nooverwrite,
+      error('Directory %s already exists, and will no overwrite allowed.');
+    end
   end
 end
 
