@@ -4,11 +4,12 @@ if ~iscell(trxfiles),
   trxfiles = {trxfiles};
 end
 
-[rootoutdir,dataloc_params,analysis_protocol,settingsdir,forcecompute,nooverwrite] = ...
+[rootoutdir,dataloc_params,analysis_protocol,settingsdir,is_temporally_aligned,forcecompute,nooverwrite] = ...
   myparse(varargin,'rootoutdir','',...
   'dataloc_params',[],...
   'analysis_protocol','current',...
   'settingsdir','/groups/branson/bransonlab/projects/olympiad/FlyBowlAnalysis/settings',...
+  'is_temporally_aligned',false,...
   'forcecompute',false,...
   'nooverwrite',false);
 
@@ -42,8 +43,13 @@ for moviei = 1:numel(outexpdirs),
 end
 
 td0 = load(fullfile(expdir0,dataloc_params.trxfilestr));
+rd0 = load(fullfile(expdir0,dataloc_params.registrationmatfilestr));
 meddt = nanmedian(diff([td0.timestamps]));
-t0 = min([td0.trx.firstframe]);
+if is_temporally_aligned,
+  t0 = min([td0.trx.firstframe]);
+else
+  t0 = 1;
+end
 
 for moviei = 1:numel(outexpdirs),
 
@@ -55,6 +61,7 @@ for moviei = 1:numel(outexpdirs),
   outtd = struct;
   T = size(td.x,1);
   t1 = t0 + T - 1;
+  outtd.registrationinfo = td0.registrationinfo;
   outtd.timestamps = td0.timestamps(1) + meddt*(0:t1-1);
   outtd.trx = repmat(td0.trx(1),[1,size(td.x,2)]);
   medarea = nanmedian(td.a.*td.b,1);
@@ -77,11 +84,11 @@ for moviei = 1:numel(outexpdirs),
     outtd.trx(i).dt = diff(outtd.trx(i).timestamps);
     outtd.trx(i).x = td.x(:,i)';
     outtd.trx(i).y = td.y(:,i)';
-    outtd.trx(i).theta = td.theta(:,i)';
-    outtd.trx(i).a = td.a(:,i)';
-    outtd.trx(i).b = td.b(:,i)';
-    outtd.trx(i).x_mm = outtd.trx(i).x / outtd.trx(i).pxpermm;
-    outtd.trx(i).y_mm = outtd.trx(i).y / outtd.trx(i).pxpermm;
+    outtd.trx(i).theta = -td.theta(:,i)';
+    outtd.trx(i).a = td.a(:,i)'/4;
+    outtd.trx(i).b = td.b(:,i)'/4;
+    outtd.trx(i).x_mm = (outtd.trx(i).x-rd0.circleCenterX) / outtd.trx(i).pxpermm;
+    outtd.trx(i).y_mm = (outtd.trx(i).y-rd0.circleCenterY) / outtd.trx(i).pxpermm;
     outtd.trx(i).a_mm = outtd.trx(i).a / outtd.trx(i).pxpermm;
     outtd.trx(i).b_mm = outtd.trx(i).b / outtd.trx(i).pxpermm;
     outtd.trx(i).theta_mm = outtd.trx(i).theta;

@@ -29,10 +29,9 @@ trxfilestrs = {
 %   'rnn50_trx_0t0_30320t1_epoch100000_SMSF_videotypev2_102hid_lr0.010000_testvideo9.mat'
   };
 trxfiles = cellfun(@(x) fullfile(rootsimtestdir,x),trxfilestrs,'Uni',0);
-% one real experiment that the simulator was trained on. ideally, it would
-% be the one used for seeding the simulation. 
+% real experiment used for seeding the simulation
 % 
-expdir0 = '/groups/branson/home/bransonk/behavioranalysis/code/SSRNN/SSRNN/Data/bowl/GMR_71G01_AE_01_TrpA_Rig1Plate15BowlA_20120316T144027';
+expdir0 = '/groups/branson/home/bransonk/behavioranalysis/code/SSRNN/SSRNN/Data/bowl/GMR_71G01_AE_01_TrpA_Rig2Plate14BowlA_20110707T154658';
 
 %% compute per-frame features
 
@@ -45,7 +44,8 @@ dataloc_params.flytrackertrackstr = 'movie-track.mat';
 simexpdirs = PrepareSimTrx4JAABA(trxfiles,expdir0,...
   'rootoutdir',rootoutdir,...
   'dataloc_params',dataloc_params,...
-  'nooverwrite',false);
+  'forcecompute',true,...
+  'is_temporally_aligned',false);
 
 %% sanity check
 
@@ -83,7 +83,7 @@ xlabel(perframefn);
 addpath /groups/branson/home/bransonk/behavioranalysis/code/Jdetect/Jdetect/perframe;
 
 for moviei = 1:numel(simexpdirs),
-  JAABADetect(simexpdirs{moviei},'jabfiles',{jabfile});
+  JAABADetect(simexpdirs{moviei},'jabfiles',{jabfile},'forcecompute',true);
 end
 
 jd = loadAnonymous(jabfile);
