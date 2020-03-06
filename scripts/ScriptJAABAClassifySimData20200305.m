@@ -49,34 +49,58 @@ simexpdirs = PrepareSimTrx4JAABA(trxfiles,expdir0,...
 
 %% sanity check
 
-perframefn = 'velmag_ctr';
+perframefn = 'dnose2ell';
 pd0 = load(fullfile(expdir0,dataloc_params.perframedir,[perframefn,'.mat']));
 pfd = [pd0.data{:}];
 maxvelmag = prctile(pfd,99);
 edges = linspace(0,maxvelmag,101);
 ctrs = (edges(1:end-1)+edges(2:end))/2;
-counts = hist(pfd,ctrs);
+
+counts = nan(numel(pd0.data),numel(ctrs));
+for i = 1:numel(pd.data),
+  pfd = pd0.data{i};
+  counts(i,:) = hist(pfd,ctrs);
+  %plot(ctrs,counts/sum(counts));
+end
+
 figure(123);
 clf;
-plot(ctrs,counts/sum(counts),'k-','LineWidth',2);
-hold on;
-[~,n] = fileparts(expdir0);
-legs = {['real ',n]};
+hax = createsubplots(2,1,.05);
+axes(hax(1));
+% colors1 = bone(numel(pd0.data));
+% colors2 = copper(numel(pd0.data));
+% nflies = numel(pd0.data);
+% colors = [colors1(end-ceil(nflies/2)-3:end-4,:)
+%   flipud(colors2(end-floor(nflies/2)+1:end,:))];
+% simflies = [1,11];
+% colors(simflies,:) = 0;
 
-for moviei = 1:numel(simexpdirs),
-  [~,n] = fileparts(simexpdirs{moviei});
-  pd = load(fullfile(simexpdirs{moviei},dataloc_params.perframedir,[perframefn,'.mat']));
-  for i = 1:numel(pd.data),
-    pfd = pd.data{i};
-    counts = hist(pfd,ctrs);
-    plot(ctrs,counts/sum(counts));
-    legs{end+1} = sprintf('fly%d_%s',i,n);
-  end
-  %mean_velmag_ctr = nanmean([pd.data{:}]);
+h = bar(ctrs,counts'/sum(counts(:)),'stacked');
+% for i = 1:numel(h),
+%   set(h(i),'FaceColor',colors(i,:));
+% end
+% set(h,'LineStyle','none');
+title('real');
+box off;
+
+moviei = 1;
+axes(hax(2));
+pd = load(fullfile(simexpdirs{moviei},dataloc_params.perframedir,[perframefn,'.mat']));
+counts = zeros(numel(pd.data),numel(ctrs));
+for i = 1:numel(pd.data),
+  pfd = pd.data{i};
+  counts(i,:) = hist(pfd,ctrs);
 end
-  
-legend(legs,'interpreter','none');
+h = bar(ctrs,counts'/sum(counts(:)),'stacked');
+% for i = 1:numel(h),
+%   set(h(i),'FaceColor',colors(i,:));
+% end
+% set(h,'LineStyle','none');
 xlabel(perframefn);
+title('simulated');
+box off;
+
+linkaxes(hax);
 
 %% run chase classifier
 
@@ -110,7 +134,7 @@ for moviei = 1:numel(simexpdirs),
     jd.behaviors.names{1},simfractime(moviei));
   fprintf('Per fly:');
   for i = 1:numel(sd.allScores.postprocessed),
-    fprintf(' %f',simfractime_fly{moviei}(i));
+    fprintf(' %d: %f',i,simfractime_fly{moviei}(i));
   end
   fprintf('\n');
   

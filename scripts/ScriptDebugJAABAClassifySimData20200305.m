@@ -24,22 +24,22 @@ moviei = 1;
 fly = 7;
 
 off = 2564;
-nplot = 10000;
-for fni = 102:numel(perframefns),
+nplot = 1000;
+for fni = 1:numel(perframefns),
 %perframefn = 'velmag_ctr';
 perframefn = perframefns{fni};
 pd0 = load(fullfile(expdir0,dataloc_params.perframedir,[perframefn,'.mat']));
 pfd0 = pd0.data{fly};
 figure(123);
 clf;
-plot(pfd0(1:nplot),'x');
+plot(pfd0(1:nplot),'-');
 hold on;
 [~,n] = fileparts(expdir0);
 legs = {['real ',n]};
 
 pd = load(fullfile(simexpdirs{moviei},dataloc_params.perframedir,[perframefn,'.mat']));
 pfd = pd.data{fly}(off:end);
-plot(pfd(1:nplot),'.');
+plot(pfd(1:nplot),'-');
 title(perframefn);
 input('');
 end
@@ -97,4 +97,12 @@ for t = 1:10000,
   set(hax,'XLim',trx(fly).x(t)+[-100,100],...
     'YLim',trx(fly).y(t)+[-100,100]);
   drawnow;
+end
+
+%% 
+
+for fly = 1:20,
+  clf;
+  plot(td0.trx(fly).x,td.trx(fly).x(off:off+numel(td0.trx(fly).x)-1),'.');
+  input(num2str(fly));
 end
