@@ -1,29 +1,63 @@
 rootdir = '/groups/branson/home/bransonk/behavioranalysis/code/SSRNN/SSRNN';
+rootbowldir = '/nearline/branson/bowl_data';
 
 addpath(genpath('.'));
 addpath(fullfile(rootdir,'Code'));
 
-expdirs = {
-  '/nearline/branson/bowl_data/GMR_71G01_AE_01_TrpA_Rig1Plate15BowlA_20120316T144027'
-  '/nearline/branson/bowl_data/GMR_71G01_AE_01_TrpA_Rig1Plate15BowlB_20120316T144030'
-  '/nearline/branson/bowl_data/GMR_71G01_AE_01_TrpA_Rig1Plate15BowlC_20120316T144000'
-  '/nearline/branson/bowl_data/GMR_71G01_AE_01_TrpA_Rig1Plate15BowlD_20120316T144003'
-  '/nearline/branson/bowl_data/GMR_71G01_AE_01_TrpA_Rig2Plate14BowlA_20110707T154658'
-  '/nearline/branson/bowl_data/GMR_71G01_AE_01_TrpA_Rig2Plate14BowlB_20110707T154653'
-  '/nearline/branson/bowl_data/GMR_71G01_AE_01_TrpA_Rig2Plate14BowlC_20110707T154934'
-  '/nearline/branson/bowl_data/GMR_71G01_AE_01_TrpA_Rig2Plate14BowlD_20110707T154929'
-  '/nearline/branson/bowl_data/GMR_71G01_AE_01_TrpA_Rig2Plate17BowlA_20110916T155922'
-  '/nearline/branson/bowl_data/GMR_71G01_AE_01_TrpA_Rig2Plate17BowlA_20110921T085351'
-  '/nearline/branson/bowl_data/GMR_71G01_AE_01_TrpA_Rig2Plate17BowlB_20110916T155917'
-  '/nearline/branson/bowl_data/GMR_71G01_AE_01_TrpA_Rig2Plate17BowlB_20110921T085346'
-  '/nearline/branson/bowl_data/GMR_71G01_AE_01_TrpA_Rig2Plate17BowlC_20110916T155358'
-  '/nearline/branson/bowl_data/GMR_71G01_AE_01_TrpA_Rig2Plate17BowlC_20110921T084823'
-  '/nearline/branson/bowl_data/GMR_71G01_AE_01_TrpA_Rig2Plate17BowlD_20110916T155353'
-  '/nearline/branson/bowl_data/GMR_71G01_AE_01_TrpA_Rig2Plate17BowlD_20110921T084818'
-  };
+%GAL4linestr = 'GMR_71G01_AE_01_TrpA';
+%GAL4linestr = 'pBDPGAL4U_TrpA';
+%GAL4linestr = 'GMR_91B01_AE_01_TrpA';
+GAL4linestr = 'GMR_26E01_AE_01_TrpA';
+nexps = 16;
+
+allexpdirs = mydir(fullfile(rootbowldir,[GAL4linestr,'*']));
+assert(~isempty(allexpdirs));
+isp = false(1,numel(allexpdirs));
+clear expinfo;
+for i = 1:numel(allexpdirs),
+  expinfo(i) = parseExpDir(allexpdirs{i});
+  f = fullfile(allexpdirs{i},'automatic_checks_complete_results.txt');
+  if ~exist(f,'file'),
+    continue;
+  end
+  r = ReadParams(fullfile(allexpdirs{i},'automatic_checks_complete_results.txt'));
+  isp(i) = strcmpi(r.automated_pf,'P');
+end
+allexpdirs = allexpdirs(isp);
+expinfo = expinfo(isp);
+if numel(allexpdirs) <= nexps,
+  expdirs = allexpdirs;
+else
+  datenums = datenum({expinfo.date},'yyyymmddTHHMMSS');
+  rigbowl = arrayfun(@(x) [x.rig,x.bowl],expinfo,'Uni',0);
+  [~,~,rbi] = unique(rigbowl);
+  nexpsperrb = nexps/max(rbi);
+  expidx = nan(1,nexps);
+  selecteddatenums = nan(nexps,1);
+  for i = 1:max(rbi),
+    idx = find(rbi == i);
+    if i == 1,
+      [~,order] = sort(datenums(idx));
+      idx1 = order(round(linspace(1,numel(idx),nexpsperrb)));
+      selecteddatenums((i-1)*nexpsperrb+(1:nexpsperrb)) = datenums(idx(idx1));
+    else
+      idx1 = nan(1,nexpsperrb);
+      for j = 1:nexpsperrb,
+        d = min(abs(selecteddatenums-datenums(idx)'),[],1);
+        [~,idx1(j)] = max(d);
+        selecteddatenums((i-1)*nexpsperrb+j) = datenums(idx(idx1(j)));
+      end
+    end
+    expidx((i-1)*nexpsperrb+(1:nexpsperrb)) = idx(idx1);
+  end
+  expdirs = allexpdirs(expidx);
+end
+
 moviestr = 'movie.ufmf';
 rootoutdir = fullfile(rootdir,'Data/bowl');
 forcevision = true;
+
+%% track and compute features
 
 
 for moviei = 1:numel(expdirs),
@@ -63,7 +97,10 @@ else
 end
 
 %% compute motion and vision features
+
   
+% locations of data
+
 trkfile = fullfile(outexpdir,[vidname '-track.mat']);
 motionfile = fullfile(outexpdir,[vidname '-motion.mat']);
 visionfile = fullfile(outexpdir,[vidname '-vision.mat']);
@@ -71,119 +108,28 @@ calibfile = fullfile(outexpdir,'calibration.mat');
 bgfile = fullfile(outexpdir,[vidname '-bg.mat']);
 featfile = fullfile(outexpdir,[vidname '-feat.mat']);
 
+% model
+model_dir = fullfile(rootdir,'Models/');
+model_name = 'data4_dtype2_target4__GRU_layers1_units100_window1_bins50_diag0_later1__seq50_batch20_Yw1.0_Xw80.0_XtY0.5_C0.0_lr0.3_maint1_imp0_costw0_ada0_prct1.0_bestCost.mat';
+modelfile = fullfile(model_dir,model_name);
+
+% output
+simulatefile = fullfile(outexpdir,'eyrun_simulate_data.mat');
+
 if ~forcevision && exist(motionfile,'file') && exist(visionfile,'file') && exist(fullfile(outexpdir,'eyrun_simulate_data.mat'),'file'),
   continue;
 end
 
-% model
-model_dir = fullfile(rootdir,'Models/');
-model_name = 'data4_dtype2_target4__GRU_layers1_units100_window1_bins50_diag0_later1__seq50_batch20_Yw1.0_Xw80.0_XtY0.5_C0.0_lr0.3_maint1_imp0_costw0_ada0_prct1.0_bestCost.mat';
-
-% get scale parameters;
-D = load([model_dir model_name]);
+D = load(fileinfo.modelfile);
 ranges = D.dataparam.scale;
 mindist = D.dataparam.mindist;
 
-fileinfo = struct('trkfile',trkfile,'motionfile',motionfile,'visionfile',visionfile,'calibfile',calibfile,'bgfile',bgfile,'featfile',featfile);
+fileinfo = struct('trkfile',trkfile,'motionfile',motionfile,'visionfile',visionfile,...
+  'calibfile',calibfile,'bgfile',bgfile,'featfile',featfile,'modelfile',modelfile,...
+  'simulatefile',simulatefile);
 compute_motion_vision_features(3, fileinfo, 'mindist', mindist);
 
-% locations of data
-
-% load data 
-D = load(trkfile); trk = D.trk;
-D = load(motionfile); motion = D.motion;
-D = load(visionfile); vision = D.vision;
-D = load(calibfile); calib = D.calib;
-D = load(bgfile); bg = D.bg.bg_mean;
-
-
-% true motion data
-n_motions = size(motion.data,3);
-for i=1:n_motions
-  motion.data(:,:,i) = motion.data(:,:,i)./ranges(i);
-end
-
-% get scale parameter from vison
-n_oma = size(vision.data,3);
-
-% place points on the edge of the chamber
-mask = calib.masks{1};
-mask(1,:) = 0; mask(end,:) = 0;
-mask(:,1) = 0; mask(:,end) = 0;
-outline = mask-imerode(mask,strel('disk',1));
-[I,J] = find(outline==1);
-
-% interpolate trk data
-n_frames = size(trk.data,2);
-for s=1:size(trk.data,1)
-  for f_ind=1:17
-    vec = trk.data(s,:,f_ind);
-    invalid = isnan(vec);
-    cc = bwconncomp(invalid);
-    for c=1:cc.NumObjects
-      % only interpolate if gap is less than 2 seconds
-      if numel(cc.PixelIdxList{c}) > calib.FPS * 2
-        continue;
-      end
-      fr_start = cc.PixelIdxList{c}(1)-1;
-      fr_end   = cc.PixelIdxList{c}(end)+1;
-      frs = fr_start:fr_end;
-      % do not interpolate at the ends
-      if fr_start < 1 || fr_end > n_frames
-        continue
-      end
-      piece = (vec(fr_end)-vec(fr_start))/(numel(frs)-1);
-      coeffs = 0:(numel(frs)-1);
-      vec(frs) = vec(fr_start) + coeffs * piece;
-    end
-    trk.data(s,:,f_ind) = vec;
-  end
-end
-
-% Load model
-model = read_model([model_dir model_name]);
-bins = model.bins;
-sz = bins(:,2)-bins(:,1);
-binedges = [bins(:,1)-sz,bins,bins(:,end)+sz];
-bincenters = (binedges(:,1:end-1)+binedges(:,2:end))/2;
-
-trx_x = trk.data(:,:,1);
-trx_y = trk.data(:,:,2);
-trx_theta = trk.data(:,:,3);
-trx_a = trk.data(:,:,4);
-trx_b = trk.data(:,:,5);
-trx_l_wing_ang = trk.data(:,:,14);
-trx_l_wing_len = trk.data(:,:,15);
-trx_r_wing_ang = trk.data(:,:,16);
-trx_r_wing_len = trk.data(:,:,17);
-
-PPM = calib.PPM;
-FPS = calib.FPS;
-
-% 
-% % initial values
-% x = trk.data(:,1,1);
-% y = trk.data(:,1,2);
-% theta = trk.data(:,1,3);
-% 
-% % set other features to be similar to specified fly
-% a          = nanmedian(trk.data(:,:,4),2);
-% b          = nanmedian(trk.data(:,:,5),2);
-% l_wing_ang = -nanmedian(trk.data(:,:,14),2);
-% l_wing_len = nanmedian(trk.data(:,:,15),2);
-% r_wing_ang = nanmedian(trk.data(:,:,16),2);
-% r_wing_len = nanmedian(trk.data(:,:,17),2);
-% 
-% % median values:
-% awing1 = l_wing_ang;
-% awing2 = r_wing_ang;
-% lwing1 = l_wing_len;
-% lwing2 = r_wing_len;
-% majax = a;
-
-motiondata = motion.data;
-
-save(fullfile(outexpdir,'eyrun_simulate_data.mat'),'trx_*','ranges','mindist','n_oma','I','J','PPM','FPS','binedges','bincenters','motiondata','bg');
+compute_simulate_data(fileinfo);
 
 end
 
