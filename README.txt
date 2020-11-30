@@ -1,4 +1,4 @@
-FlyTracker-1.0.5 (2017-01-04)
+FlyTracker
 
 
 System requirements:
@@ -10,7 +10,7 @@ System requirements:
 Quick start:
 
 1. Add Fly-Tracker to your Matlab path by navigating to its directory and typing:
-     >> addpath(genpath(pwd)); savepath;
+     >> modpath; savepath;
 
 2. Collect all videos with identical filming- and experimental conditions into one folder.
 
