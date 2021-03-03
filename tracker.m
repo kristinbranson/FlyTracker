@@ -70,6 +70,7 @@ function run_tracker(videos, options, f_calib, vinfo)
    options_def.force_calib = false;
    options_def.expdir_naming = false;
    options_def.isdisplay = true;
+   options_def.force_tracking = false ;
    
    % set display variables
    display_available = feature('ShowFigureWindows');   
@@ -208,6 +209,9 @@ function run_tracker(videos, options, f_calib, vinfo)
       end      
       % check whether video has already been tracked
       f_res_final = fullfile(dir_vid, [name '-track.mat']);
+      if options.force_tracking ,
+        delete(f_res_final) ;
+      end
       if exist(f_res_final,'file')
           disp('Movie already tracked')
           % compute features and learning files if specified
