@@ -57,20 +57,9 @@ function tracker(videos, options, f_calib, vinfo)
 end
 
 function run_tracker(videos, options, f_calib, vinfo)
+
    % default options
-   options_def.granularity = 10000;
-   options_def.num_chunks  = [];
-   options_def.num_cores   = 1;     
-   options_def.max_minutes = inf;      
-   options_def.fr_samp     = 100;
-   options_def.save_JAABA  = false;
-   options_def.save_xls    = false;
-   options_def.save_seg    = false;
-   options_def.f_parent_calib = '';
-   options_def.force_calib = false;
-   options_def.expdir_naming = false;
-   options_def.isdisplay = true;
-   options_def.force_tracking = false ;
+   options_def = DefaultOptions();
    
    % set display variables
    display_available = feature('ShowFigureWindows');   
@@ -80,6 +69,11 @@ function run_tracker(videos, options, f_calib, vinfo)
    % fill in specified options
    if ((nargin < 2) || (isempty(options))), options = options_def; end
    options = set_defaults(options, options_def);
+   if options.force_all,
+     options.force_calib = true;
+     options.force_tracking = true;
+     options.force_features = true;
+   end
    
    display_available = display_available && options.isdisplay;
    
@@ -174,8 +168,13 @@ function run_tracker(videos, options, f_calib, vinfo)
    end
 
    % compute maximum number of frames to process
-   max_frames = options.max_minutes*parent_calib.FPS*60;
+   max_frames = round(options.max_minutes*parent_calib.FPS*60);
+   endframe = options.startframe + max_frames - 1;
    min_chunksize = 100;
+   
+   runinfo = struct;
+   runinfo.vid_files = vid_files;
+   runinfo.frs_per_chunk = cell(1,n_vids);
    
    % package jobs to be run in sequence
    for n = 1:n_vids
@@ -209,13 +208,13 @@ function run_tracker(videos, options, f_calib, vinfo)
       end      
       % check whether video has already been tracked
       f_res_final = fullfile(dir_vid, [name '-track.mat']);
-      if options.force_tracking ,
+      if options.force_tracking && exist(f_res_final,'file'),
         delete(f_res_final) ;
       end
       if exist(f_res_final,'file')
           disp('Movie already tracked')
           % compute features and learning files if specified
-          tracker_job('track_features',f_vid,f_res_final,f_calib,options,0);          
+          tracker_job('track_features',f_vid,f_res_final,f_calib,options,options.force_features);          
           continue;
       end
       % load video
@@ -225,7 +224,9 @@ function run_tracker(videos, options, f_calib, vinfo)
         do_close = 1;
       end
       % get length of video 
-      n_frames = min(vinfo.n_frames,max_frames); 
+      endframe = min(vinfo.n_frames,endframe); 
+      n_frames = endframe - options.startframe + 1;
+      %n_frames = min(vinfo.n_frames,max_frames); 
       % output filenames
       f_bg  = fullfile(dir_vid, [name '-bg.mat']);
       if n_vids > 1 && parent_calib.auto_detect
@@ -252,9 +253,9 @@ function run_tracker(videos, options, f_calib, vinfo)
       frs = cell(1,n_chunks);
       f_trks = cell(1,n_chunks);
       for c=1:n_chunks
-         fr.start = (c-1).*options.granularity;
+         fr.start = options.startframe-1+(c-1).*options.granularity;
          fr.step  = 1;
-         fr.limit = min(fr.start + options.granularity, n_frames);
+         fr.limit = min(fr.start + options.granularity, endframe);
          frs{c} = fr;
          f_trks{c} = cell(1,n_chambers);
          for i=1:n_chambers
@@ -270,6 +271,7 @@ function run_tracker(videos, options, f_calib, vinfo)
             f_trks{c}{i} = f_trk;
          end
       end
+      runinfo.frs_per_chunk{n} = frs;
       % check whether chamber files already exist
       f_res = fullfile(dir_vid, [name chamber_str '-track.mat']);
       if ~exist(f_res,'file') 
@@ -318,7 +320,7 @@ function run_tracker(videos, options, f_calib, vinfo)
         tracker_job('track_consolidate', f_res_final, f_res_list, options);
       end
       % compute features and learning files if specified
-      tracker_job('track_features', f_vid, f_res_final, f_calib, options, 0);
+      tracker_job('track_features', f_vid, f_res_final, f_calib, options, 1);
       
       % close video
       if do_close
@@ -326,6 +328,8 @@ function run_tracker(videos, options, f_calib, vinfo)
         vinfo = [];
       end
    end
+   
+   save(f_params,'runinfo','-append');
    
    if ~isempty(dh) && ishandle(dh)      
        child = get(dh,'Children');
@@ -724,24 +728,4 @@ function tracker_interface()
     function ui_close(hObj,event) %#ok<INUSD>
         delete(fig_h);     
     end    
-end
-
-%% Help functions
-% Set default values for parameter fields not specified by the user.
-%
-%    params = set_defaults(params, params_def)
-%
-% copies any fields specified in params_def but not params into params.  If
-% params is empty, then params is set to params_def.
-function params = set_defaults(params, params_def)
-   if (isempty(params))
-      % return default parameters
-      params = params_def;
-   else
-      % set default values for any unspecified parameters
-      names = setdiff(fieldnames(params_def),fieldnames(params));
-      for n = 1:numel(names)
-         params = setfield(params, names{n}, getfield(params_def, names{n}));
-      end
-   end
 end

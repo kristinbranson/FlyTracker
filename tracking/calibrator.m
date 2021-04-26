@@ -1503,6 +1503,16 @@ function params = infer_tracker_params()
     params.min_wing_area          = max(7,10*sf^2);       
     params.vel_thresh             = 20*calib.PPM/calib.FPS; %20 mm/sec
     params.spike_thresh           = 2.5;
+    % .2 seconds with velocity or wings incorrect will give a cost of 
+    % .2*calib.FPS 
+    % we want this to be equal to the cost of flipping by 180 degrees twice
+    % w*2*pi = .2*calib.FPS
+    % w = .2*calib.FPS/(2*pi)
+    params.choose_orientations_weight_theta = .2*calib.FPS/(2*pi);
+    vel_fil_w = ceil(calib.FPS/30); % filter for computing velocities
+    params.vel_fil = normpdf(linspace(-2,2,vel_fil_w));
+    params.vel_fil = params.vel_fil / sum(params.vel_fil);
+    params.vel_fil = conv([-1,0,1]/2,params.vel_fil)';
 end    
 
 function updateFgThr(val)     
@@ -1632,11 +1642,17 @@ function finish(~,~)
     end
     if count > 0
        body_sizes = body_sizes(1:count,:); 
-       medians = prctile(body_sizes,50);
+       medians = prctile(body_sizes,50,1);
+       quartiles1 = prctile(body_sizes,25,1);
+       quartiles2 = prctile(body_sizes,75,1);
        maxs = prctile(body_sizes,95) * 1.15;
        calib.params.mean_major_axis = medians(1);
        calib.params.mean_minor_axis = medians(2);    
        calib.params.mean_area       = medians(3);
+       calib.params.quartile_major_axis = [quartiles1(1),quartiles2(1)];
+       calib.params.quartile_minor_axis = [quartiles1(2),quartiles2(2)];
+       calib.params.quartile_area = [quartiles1(3),quartiles2(3)];
+
        calib.params.max_major_axis  = maxs(1);
        calib.params.max_minor_axis  = maxs(2);    
        calib.params.max_area        = maxs(3)*1.15;       

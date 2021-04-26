@@ -47,6 +47,10 @@ end
 
 function h = waitDialog(text,fontsize)
     drawnow
+    hopen = findall(0,'Name','Please wait');
+    if ~isempty(hopen),
+      delete(hopen);
+    end
     bgclr = .94*[1 1 1];
     % position box
     width = max(round(numel(text)*fontsize*.7)+20,200);

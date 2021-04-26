@@ -225,19 +225,21 @@ function flag = tracker_job_combine(f_res, f_trk_list, f_calib, options, chamber
   % COMBINE TRACKS
   % count number of sequences and number of frames
   n_seq = 0;
-  n_frm = 0;
+  n_frm = options.startframe-1;
   n_seq_guess = numel(f_trk_list)*calib.n_flies;
   n_frm_guess = numel(f_trk_list)*options.granularity;      
+  endframe_guess = n_frm_guess + options.startframe-1;
   % initialize combined tracks
-  trk.frame_ids      = zeros([1 n_frm_guess]);
-  trk.frame_seq_list = cell([n_frm_guess 1]);
-  trk.sequences      = cell([n_seq_guess 1]);
+  trk.frame_ids      = zeros([1 endframe_guess]);
+  trk.frame_ids(1:options.startframe-1) = 1:options.startframe-1;
+  trk.frame_seq_list = cell([endframe_guess 1]);
+  trk.sequences      = cell([endframe_guess 1]);
   flags = [];
   if save_seg
-      frame_data = cell([n_frm_guess 1]);
+      frame_data = cell([endframe_guess 1]);
   end      
   s = 0;
-  f = 0;
+  f = options.startframe-1;
   for n = 1:numel(f_trk_list)
      % load partial track
      f_trk_curr = f_trk_list{n};
@@ -344,7 +346,7 @@ function flag = tracker_job_combine(f_res, f_trk_list, f_calib, options, chamber
   % COMBINE SEGMENTATION
   if save_seg
       seg = cell(n_frm,1);
-      for f=1:n_frm
+      for f=options.startframe:n_frm
           flies = cell(1,numel(trk_full.sequences));
           for c=1:numel(trk_full.sequences)
               flies{c}.body = [];
@@ -414,7 +416,7 @@ function flag = tracker_job_combine(f_res, f_trk_list, f_calib, options, chamber
   [~,sortids] = sort(areas,'ascend');
   trk.data = trk.data(sortids,:,:);
   if save_seg
-      for f=1:n_frames
+      for f=options.startframe:n_frames
         seg{f} = seg{f}(sortids);
       end
   end

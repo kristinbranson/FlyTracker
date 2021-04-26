@@ -111,12 +111,21 @@ function writeJAABA(trkname,moviename,trk,feat,calib)
         delete(moviefile);
       end
       if isunix,
-        cmd = sprintf('ln -s %s %s',inmoviefile,moviefile);
+        [res,inmoviefile_src] = unix(sprintf('readlink %s',inmoviefile));
+        if res == 0,
+          inmoviefile_src = strtrim(inmoviefile_src);
+        else
+          inmoviefile_src = '';
+        end
+        if isempty(inmoviefile_src),
+          inmoviefile_src = inmoviefile;
+        end
+        cmd = sprintf('ln -s %s %s',inmoviefile_src,moviefile);
         unix(cmd);
         % test to make sure it worked
         [status,result] = unix(sprintf('readlink %s',moviefile));
         result = strtrim(result);
-        if status ~= 0 || ~strcmp(result,inmoviefile)
+        if status ~= 0 || ~strcmp(result,inmoviefile_src)
           dosoftlink = false;
         end
       elseif ispc,

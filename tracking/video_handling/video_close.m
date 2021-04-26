@@ -9,5 +9,7 @@ function video_close(vinfo)
    % check video type
    if (strcmp(vinfo.type,'seq'))
       vinfo.seq.sr.close();
+   elseif strcmpi(vinfo.type,'ufmf'),
+     try fclose(vinfo.ufmf.fid); end %#ok<TRYNC>
    end
 end

@@ -36,6 +36,25 @@ function trks = track_segment(trks, calib, show_progress, chamber_str)
     % check whether trks have been matched
     trks_matched = isfield(trks,'sequences');
         
+    ishighres = calib.PPM >= 3;
+
+    DISAMBIG_ORI_GLOBAL = true;
+    DEBUGPLOT = false;
+    DEBUG_seq_id = nan;
+    DEBUG_fr_idx = [];
+%     DEBUGPLOT = true;
+%     DEBUG_seq_id = 4;
+%     DEBUG_fr_idx = 1:64;
+    if DEBUGPLOT,
+      figure(5);
+      clf;
+      set(5,'Color','k');
+      naxc = ceil(sqrt(numel(DEBUG_fr_idx)));
+      naxr = ceil(numel(DEBUG_fr_idx)/naxc);
+      hax = createsubplots(naxr,naxc,0);
+      DEBUG_poses = nan(2,numel(DEBUG_fr_idx));
+    end
+    
     % set waitbar
     if show_progress
         display_available = feature('ShowFigureWindows');
@@ -57,6 +76,9 @@ function trks = track_segment(trks, calib, show_progress, chamber_str)
         n_seq = numel(trks.sequences);
         velocities = cell(1,n_seq);
         orientations = cell(1,n_seq);
+        trust_wings_save = cell(1,n_seq);
+        trust_vel_save = cell(1,n_seq);
+        doflip_save = cell(1,n_seq);
         for s=1:n_seq
             frms = trks.sequences{s}.time_start:trks.sequences{s}.time_end;
             pose = zeros(numel(frms),3);
@@ -67,12 +89,19 @@ function trks = track_segment(trks, calib, show_progress, chamber_str)
                 pose(i,3) = trks.frame_data{fr}.body_props(obj_id).Orientation;
             end
             x = pose(:,1);   y = pose(:,2);   oris = pose(:,3)*pi/180;
-            dx = zeros(size(x));   dy = zeros(size(y));
-            dx(2:end-1) = (x(3:end)-x(1:end-2))/2;
-            dy(2:end-1) = (y(3:end)-y(1:end-2))/2;
+            % KB use more frames to estimate velocity at higher frame rate
+            dx = imfilter(x,params.vel_fil,'same','replicate');
+            dy = imfilter(y,params.vel_fil,'same','replicate');
+%             dx = zeros(size(x));   dy = zeros(size(y));
+%             dx(2:end-1) = (x(3:end)-x(1:end-2))/2;
+%             dy(2:end-1) = (y(3:end)-y(1:end-2))/2;
             vel = (dx.^2 + dy.^2).^.5;
             velocities{s} = [vel dx dy];
-            
+            nframes_curr = numel(x);
+            trust_wings_save{s} = false(1,nframes_curr);
+            trust_vel_save{s} = false(1,nframes_curr);
+            doflip_save{s} = false(1,nframes_curr);
+
             % adjust ori backward to velocity
             inds = find(vel>params.vel_thresh);
             if isempty(inds), [~,inds] = max(vel); end
@@ -127,8 +156,14 @@ function trks = track_segment(trks, calib, show_progress, chamber_str)
         n_bods = detect.body_cc.NumObjects;
         
         % initialize variables to be computed
-        b_wing_pixels = cell([n_bods 1]);
-        b_wing_pts    = cell([n_bods 1]);
+        if DISAMBIG_ORI_GLOBAL,
+          b_wing_pixels = cell([n_bods 2]);
+          b_wing_pts    = cell([n_bods 2]);
+        else
+          b_wing_pixels = cell([n_bods 1]);
+          b_wing_pts    = cell([n_bods 1]);
+        end
+          
         b_leg_pixels  = cell([n_bods 1]);
         b_leg_pts     = cell([n_bods 1]);
         min_fg_dist   = zeros([n_bods 1]);
@@ -162,7 +197,7 @@ function trks = track_segment(trks, calib, show_progress, chamber_str)
         % Compute expensive features only on videos whose resolution 
         % allows for reasonable detection of wings and legs.
         %  (3 pixels per mm is an absolute minimum)
-        if calib.PPM < 3 && trks_matched
+        if ~ishighres && trks_matched
             bods = 1:detect.body_cc.NumObjects;
             for b=1:numel(bods)
                 % check whether velocity can determine orientation                    
@@ -171,9 +206,16 @@ function trks = track_segment(trks, calib, show_progress, chamber_str)
                 vel = velocities{seq_id}(fr_idx,1);
                 ori = orientations{seq_id}(fr_idx);
                 rot_vec = [cos(ori) -sin(ori)];
+
+                % KB use forward/reverse velocity -- sideways velocity is
+                % not useful
+                dxcurr = velocities{seq_id}(fr_idx,2);
+                dycurr = velocities{seq_id}(fr_idx,3);
+                vel_forward = dxcurr*rot_vec(1) + dycurr*rot_vec(2);
+
                 vector = rot_vec;
                 % disambiguate using velocity or previous frame                        
-                if vel > params.vel_thresh*.5
+                if abs(vel_forward) > params.vel_thresh*.5
                     % use velocity
                     vector = velocities{seq_id}(fr_idx,2:3);
                     vector = vector / norm(vector);
@@ -208,7 +250,7 @@ function trks = track_segment(trks, calib, show_progress, chamber_str)
                 % store disambiguated orientation
                 detect.body_props(bods(b)).Orientation = ori/pi*180;                    
             end
-        elseif calib.PPM >= 3
+        elseif ishighres,
             % find shortest fg distance between a fly and all other flies
             bod_dists = nan(n_bods);
             for b1 = 1:n_bods
@@ -420,12 +462,20 @@ function trks = track_segment(trks, calib, show_progress, chamber_str)
                         vel = velocities{seq_id}(fr_idx,1);
                         ori = orientations{seq_id}(fr_idx);
                         rot_vec = [cos(ori) -sin(ori)];
+                        
+                        % KB use forward/reverse velocity -- sideways velocity is
+                        % not useful
+                        dxcurr = velocities{seq_id}(fr_idx,2);
+                        dycurr = velocities{seq_id}(fr_idx,3);
+                        vel_forward = dxcurr*rot_vec(1) + dycurr*rot_vec(2);
+                        
                         vector = rot_vec;
                         % disambiguate using velocity or previous frame                        
-                        if vel > params.vel_thresh*.5 && numel(bods) == 1
+                        if abs(vel_forward) > params.vel_thresh*.5 && numel(bods) == 1
                             % use velocity
                             vector = velocities{seq_id}(fr_idx,2:3);
                             vector = vector / norm(vector);
+                            trust_vel_save{seq_id}(fr_idx) = true;
                         elseif i>1
                             % use previous orientation
                             if fr_idx > 1
@@ -455,12 +505,31 @@ function trks = track_segment(trks, calib, show_progress, chamber_str)
                             orientations{seq_id}(fr_idx) = ori;
                         end   
                     end
+                                        
                     rot_vec = [cos(ori) -sin(ori)];
+                    rot_vec_flip = [cos(ori+pi) -sin(ori+pi)];
+                    
+                    DEBUGCURR = DEBUGPLOT && DEBUG_seq_id == seq_id && ismember(fr_idx,DEBUG_fr_idx);
+                    if DEBUGCURR,
+                      axi = find(fr_idx==DEBUG_fr_idx,1);
+                      image(cat(3,bod_im,fg_is_wing,fg_im),'Parent',hax(axi));
+                      hold(hax(axi),'on');
+                      quiver(pos(1),pos(2),cos(-ori),sin(-ori),20,'w','Parent',hax(axi));
+                      DEBUG_poses(:,axi) = pos;
+                      if trks_matched,
+                        dzcurr = sqrt(dxcurr^2+dycurr^2);
+                        quiver(pos(1),pos(2),dxcurr/dzcurr,dycurr/dzcurr,20,'g','Parent',hax(axi));
+                      end
+                      axis(hax(axi),'image','off');
+                    end
+
+                    
                     % check how wing fit with pose
                     ws = bw_adjacency{b};
                     ws_sz = zeros(size(ws));
                     ws_dist = zeros(size(ws));
                     ws_ang = zeros(size(ws));
+                    ws_ang_flip = zeros(size(ws));
                     ws_shared = zeros(size(ws));
                     for wn = 1:numel(ws)
                         % wing size
@@ -474,94 +543,160 @@ function trks = track_segment(trks, calib, show_progress, chamber_str)
                         %vectorw = wingCenter - pos; vectorw = vectorw/norm(vectorw);
                         vectorw = pos-wingCenter; vectorw = vectorw/norm(vectorw);
                         ws_ang(wn) = acos(dot(rot_vec,vectorw));
+                        ws_ang_flip(wn) = acos(dot(rot_vec_flip,vectorw));
                         % shared?
                         ws_shared(wn) = numel(wb_adjacency{ws(wn)}) > 1;
+                        
+                        if DEBUGCURR,
+                          plot(hax(axi),[pos(1),wingCenter(1)],[pos(2),wingCenter(2)],'k-');
+                        end
+                        
                     end
                     [ws_sz, inds] = sort(ws_sz,'descend');
-                    ws_dist = ws_dist(inds); ws_ang = ws_ang(inds); 
+                    ws_dist = ws_dist(inds); 
+                    ws_ang = ws_ang(inds); 
+                    ws_ang_flip = ws_ang_flip(inds); 
                     % only consider wings that are large enough and not too
                     % far from the bodies center
                     valid = find(ws_sz >= params.wing_area_min & ...
                                 ws_dist < params.max_major_axis*1.2);                            
                     ws_ang = ws_ang(valid); 
+                    ws_ang_flip = ws_ang_flip(valid); 
                     ws_sz = ws_sz(valid);
                     ws_dist = ws_dist(valid); 
                     ws_shared = ws_shared(valid);
                     inds = inds(valid);
                     % check whether wings can be trusted
+                    trust_wings = false;
+                    trust_wings_flip = false;
                     if numel(inds)>0 && ...                                % >0 valid wings
-                       sum(ws_shared) == 0 && ...                          % wings not shared with other body
-                       max(ws_dist) > major_ax*1.05 && ...                 % longest wing longer than 1/2 fly
-                       max(ws_sz) > params.wing_area_min*2 && ...          % wing area large enough to differentiate                
-                       max(ws_ang)-min(ws_ang) < pi/2 && ...               % wings not on opposite sites of minor axis                              
-                       area > params.mean_area*.8 && ...                   % body in resting position
-                       major_ax/minor_ax > params.mean_axis_ratio*.8       % body in resting position
+                        sum(ws_shared) == 0 && ...                          % wings not shared with other body
+                        max(ws_dist) > major_ax*1.05 && ...                 % longest wing longer than 1/2 fly
+                        max(ws_sz) > params.wing_area_min*2 && ...          % wing area large enough to differentiate
+                        area > params.quartile_area(1)*.8 && ...                   % body in resting position
+                        major_ax/minor_ax > params.mean_axis_ratio*.8       % body in resting position
+                      if max(ws_ang)-min(ws_ang) < pi/2,               % wings not on opposite sites of minor axis
                         trust_wings = true;
-                    else
-                        trust_wings = false;
+                      end
+                      if max(ws_ang_flip)-min(ws_ang_flip) < pi/2,               % wings not on opposite sites of minor axis
+                        trust_wings_flip = true;
+                      end
                     end
-                    if trust_wings
+                    
+                    if ~DISAMBIG_ORI_GLOBAL,
+                      if trust_wings
                         % use wings and disambiguate orientation
                         if mean(ws_ang) > params.max_body_wing_ang
-                            ori = ori + (-1)^(ori>0)*pi; 
-                            rot_vec = [cos(ori) -sin(ori)];
-                            if trks_matched                                
-                                orientations{seq_id}(fr_idx) = ori;
-                            end
+                          ori = ori + (-1)^(ori>0)*pi;
+                          rot_vec = [cos(ori) -sin(ori)];
+                          if trks_matched
+                            orientations{seq_id}(fr_idx) = ori;
+                          end
                         end
-                    elseif n_frames > 1 
-                        % keep only wings that agree with orientation
+                      end
+                    end
+
+                    
+                    inds_flip = inds;
+                    if n_frames > 1,
+                      if ~trust_wings,
                         valid = ws_ang < params.max_body_wing_ang;
                         inds = inds(valid);
+                      end
+                      if ~trust_wings_flip,
+                        valid_flip = ws_ang_flip < params.max_body_wing_ang;
+                        inds_flip = inds_flip(valid_flip);
+                      end
                     end
-                    if numel(inds)>2, inds = inds(1:2); end
-                    ws = ws(inds);                                       
-                    wing_pix = vertcat(wing_cc.PixelIdxList{ws});
-                    
-                    % if only one wing, split it along the fly's major axis
-                    if numel(ws) == 1
-                        wing_img = zeros(fg_size);
-                        wing_img(wing_pix) = 1;
-                        center = detect.body_props(bods(b)).Centroid;
-                        center(1) = center(1) - bbox(3)+1;
-                        center(2) = center(2) - bbox(1)+1;
-                        rad = calib.PPM*10;
-                        x1 = center(1)-rot_vec(1)*rad; y1 = center(2)-rot_vec(2)*rad;
-                        x2 = center(1)+rot_vec(1)*rad; y2 = center(2)+rot_vec(2)*rad;
-                        [y,x] = ind2sub(fg_size,wing_pix);
-                        dx = x2-x1; dy = y2-y1;
-                        dists = abs(dx*(y1-y) - dy*(x1-x)) / sqrt(dx^2+dy^2);
-                        wing_img(wing_pix(dists<.75)) = 0;       
-                        new_wing_cc = bwconncomp(wing_img);                        
-                        sz = zeros(1,new_wing_cc.NumObjects);
-                        for nw=1:new_wing_cc.NumObjects
-                            sz(nw) = numel(new_wing_cc.PixelIdxList{nw});
-                        end
-                        [~,inds] = sort(sz,'descend');
-                        if numel(inds)>2, inds = inds(1:2); end
-                        ws = wing_cc.NumObjects+(1:numel(inds));
-                        wing_cc.PixelIdxList(ws) = new_wing_cc.PixelIdxList(inds);
-                        wing_cc.NumObjects = wing_cc.NumObjects + numel(inds);                        
-                        wing_pix = wing_pix(dists>.75);
-                    end
-                    [I,J] = ind2sub(fg_size,wing_pix);
-                    wing_pxls = sub2ind_faster(imsize,I+bbox(1)-1,J+bbox(3)-1);
-                    b_wing_pixels{bods(b)} = wing_pxls;
 
-                    % find extremal points of wings
-                    pts = cell([numel(ws) 1]);
-                    for wn = 1:numel(ws)
-                        w = ws(wn);
-                        pix = wing_cc.PixelIdxList{w};
-                        [I,J] = ind2sub(fg_size,pix);
-                        dists = (I-pos(2)).^2 + (J-pos(1)).^2;
-                        [~, ind] = max(dists);
-                        [x, y] = ind2sub(fg_size, pix(ind));
-                        x = x+bbox(1)-1;
-                        y = y+bbox(3)-1;
-                        pts{wn} = [y x];
+                    if trks_matched,
+                      trust_wings_save{seq_id}(fr_idx) = trust_wings || trust_wings_flip;
+
+                      doflip1 = false;
+                      doflip2 = false;
+                      if trust_wings,
+                        % use wings and disambiguate orientation
+                        if mean(ws_ang) > params.max_body_wing_ang
+                          doflip1 = true;
+                        end
+                      end
+                      if trust_wings_flip,
+                        % use wings and disambiguate orientation
+                        if mean(ws_ang_flip) > params.max_body_wing_ang
+                          doflip2 = true;
+                        end
+                      end
+                      if trust_wings && trust_wings_flip && (doflip1 == doflip2),
+                        trust_wings_save{seq_id}(fr_idx) = false;
+                      end
+                      doflip_save{seq_id}(fr_idx) = doflip1;
+                        
                     end
-                    b_wing_pts{bods(b)} = pts;
+                    
+                    if DEBUGCURR,
+                      text(1,1,sprintf('  fr = %d, wings = %d, %d, flip = %d, vel = %d',...
+                        fr_idx,trust_wings,trust_wings_flip,doflip_save{seq_id}(fr_idx),trust_vel_save{seq_id}(fr_idx)),'Parent',hax(axi),...
+                        'HorizontalAlignment','left','VerticalAlignment','top','Color','w','FontSize',8);
+                    end
+
+                    if numel(inds)>2, inds = inds(1:2); end
+                    if numel(inds_flip)>2, inds_flip = inds_flip(1:2); end
+                    ws_flip = ws;
+                    ws = ws(inds);                                       
+                    ws_flip = ws_flip(inds_flip);
+                    center = detect.body_props(bods(b)).Centroid;
+                    
+                    [b_wing_pixels{bods(b),1},b_wing_pts{bods(b),1}] = track_segment_fit_wings(fg_size,imsize,wing_cc,ws,rot_vec,center,bbox,pos,calib);
+                    if DISAMBIG_ORI_GLOBAL,
+                      [b_wing_pixels{bods(b),2},b_wing_pts{bods(b),2}] = track_segment_fit_wings(fg_size,imsize,wing_cc,ws_flip,rot_vec_flip,center,bbox,pos,calib);
+                    end
+
+%                     wing_pix = vertcat(wing_cc.PixelIdxList{ws});
+%                     
+%                     % if only one wing, split it along the fly's major axis
+%                     if numel(ws) == 1
+%                         wing_img = zeros(fg_size);
+%                         wing_img(wing_pix) = 1;
+%                         center = detect.body_props(bods(b)).Centroid;
+%                         center(1) = center(1) - bbox(3)+1;
+%                         center(2) = center(2) - bbox(1)+1;
+%                         rad = calib.PPM*10;
+%                         x1 = center(1)-rot_vec(1)*rad; y1 = center(2)-rot_vec(2)*rad;
+%                         x2 = center(1)+rot_vec(1)*rad; y2 = center(2)+rot_vec(2)*rad;
+%                         [y,x] = ind2sub(fg_size,wing_pix);
+%                         dx = x2-x1; dy = y2-y1;
+%                         dists = abs(dx*(y1-y) - dy*(x1-x)) / sqrt(dx^2+dy^2);
+%                         wing_img(wing_pix(dists<.75)) = 0;       
+%                         new_wing_cc = bwconncomp(wing_img);                        
+%                         sz = zeros(1,new_wing_cc.NumObjects);
+%                         for nw=1:new_wing_cc.NumObjects
+%                             sz(nw) = numel(new_wing_cc.PixelIdxList{nw});
+%                         end
+%                         [~,inds] = sort(sz,'descend');
+%                         if numel(inds)>2, inds = inds(1:2); end
+%                         ws = wing_cc.NumObjects+(1:numel(inds));
+%                         wing_cc.PixelIdxList(ws) = new_wing_cc.PixelIdxList(inds);
+%                         wing_cc.NumObjects = wing_cc.NumObjects + numel(inds);                        
+%                         wing_pix = wing_pix(dists>.75);
+%                     end
+%                     [I,J] = ind2sub(fg_size,wing_pix);
+%                     wing_pxls = sub2ind_faster(imsize,I+bbox(1)-1,J+bbox(3)-1);
+%                     b_wing_pixels{bods(b)} = wing_pxls;
+% 
+%                     % find extremal points of wings
+%                     pts = cell([numel(ws) 1]);
+%                     for wn = 1:numel(ws)
+%                         w = ws(wn);
+%                         pix = wing_cc.PixelIdxList{w};
+%                         [I,J] = ind2sub(fg_size,pix);
+%                         dists = (I-pos(2)).^2 + (J-pos(1)).^2;
+%                         [~, ind] = max(dists);
+%                         [x, y] = ind2sub(fg_size, pix(ind));
+%                         x = x+bbox(1)-1;
+%                         y = y+bbox(3)-1;
+%                         pts{wn} = [y x];
+%                     end
+%                     b_wing_pts{bods(b)} = pts;
                     
                     % store disambiguated orientation
                     detect.body_props(bods(b)).Orientation = ori/pi*180;                    
@@ -580,6 +715,86 @@ function trks = track_segment(trks, calib, show_progress, chamber_str)
         % store detections
         trks.frame_data{i} = detect;    
     end
+    
+    if ishighres && trks_matched && DISAMBIG_ORI_GLOBAL,
+      new_orientations = cell(1,n_seq);
+      flipidx = cell(1,n_seq);
+      for s = 1:n_seq,
+        nframes_curr = numel(orientations{s});
+        appearancecost = zeros(2,nframes_curr);
+        for fr = 1:nframes_curr,
+          trust_wings = trust_wings_save{s}(fr);
+          trust_vel = trust_vel_save{s}(fr);
+          if trust_wings,
+            wingflip = doflip_save{s}(fr);
+            if wingflip,
+              appearancecost(1,fr) = appearancecost(1,fr)+1;
+            else
+              appearancecost(2,fr) = appearancecost(2,fr)+1;
+            end
+          end
+          if trust_vel,
+            appearancecost(1,fr) = appearancecost(1,fr)+1; % always prefer not to flip
+          end
+          weight_theta = nan(size(orientations{s}));
+          weight_theta(:) = params.choose_orientations_weight_theta;
+        end
+        [new_orientations{s},flipidx{s}] = choose_orientations_generic(orientations{s},weight_theta,appearancecost);
+        
+      end
+      
+      for i = 1:n_frames,
+
+        detect = trks.frame_data{i};
+        n_bods = detect.body_cc.NumObjects;
+        
+        % map bodies to sequences - recompute, fast
+        seqs = trks.frame_seq_list{i};
+        seq_bod = zeros(numel(seqs),2);
+        for s=1:numel(seqs)
+          t_s = trks.sequences{seqs(s)}.time_start;
+          bod = trks.sequences{seqs(s)}.obj_list(i-t_s+1);
+          seq_bod(s,:) = [seqs(s) bod];
+        end
+        
+        b_wing_pixels = cell([n_bods 1]);
+        b_wing_pts    = cell([n_bods 1]);
+
+        for b = 1:n_bods,
+          
+          seq_id = seq_bod(seq_bod(:,2)==b,1);
+          fr_idx = i - trks.sequences{seq_id}.time_start+1;
+          fi = flipidx{seq_id}(fr_idx);
+          ori = new_orientations{seq_id}(fr_idx);
+          
+          b_wing_pixels{b} = detect.seg.body_wing_pixels{b,fi};
+          b_wing_pts{b} = detect.seg.body_wing_coords{b,fi};
+
+          assert(abs(modrange( new_orientations{seq_id}(fr_idx) - (detect.body_props(b).Orientation*pi/180+(fi-1)*pi),-pi,pi ))<.01)
+          
+          detect.body_props(b).Orientation = ori/pi*180;                  
+                
+          if DEBUGPLOT && DEBUG_seq_id == seq_id,
+            axi = find(fr_idx==DEBUG_fr_idx);
+            if ~isempty(axi),
+              pos = DEBUG_poses(:,axi);
+              quiver(pos(1),pos(2),cos(-ori),sin(-ori),20,'k:','Parent',hax(axi),'LineWidth',2);
+            end
+          end
+
+          
+        end
+        
+        % store segmentation wing information
+        detect.seg.body_wing_pixels = b_wing_pixels;
+        detect.seg.body_wing_coords = b_wing_pts;
+        trks.frame_data{i} = detect;    
+
+
+        
+      end
+    end
+    
     
     % close waitbar
     if show_progress
