@@ -42,9 +42,9 @@ function trks = track_segment(trks, calib, show_progress, chamber_str)
     DEBUGPLOT = false;
     DEBUG_seq_id = nan;
     DEBUG_fr_idx = [];
-%     DEBUGPLOT = true;
-%     DEBUG_seq_id = 4;
-%     DEBUG_fr_idx = 1:64;
+%    DEBUGPLOT = true;
+%    DEBUG_seq_id = 14;
+%    DEBUG_fr_idx = 1:64;
     if DEBUGPLOT,
       figure(5);
       clf;
