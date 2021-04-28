@@ -1,3 +1,9 @@
+This code is a modified version of FlyTracker
+http://www.vision.caltech.edu/Tools/FlyTracker/
+originally developed by Eyrun Eyjolfsdottir and Pietro Perona. It was modified by Kristin Branson and Adam Taylor. Please see the git log for details on modifications. The original README is below.
+
+******************
+
 FlyTracker
 
 
