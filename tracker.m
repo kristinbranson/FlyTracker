@@ -28,7 +28,7 @@
 %    f_calib            - file containing calibration data (default: [videos.dir_in]/calibration.mat)
 %    vinfo              - if specified, ignore videos and use loaded video
 %
-function tracker(videos, options, f_calib, vinfo)
+function tracker(videos, options, f_calib, vinfo_or_video_file_name)
 
    % add tracker to path if its not there already
    check = which('is_atomic_detection');
@@ -51,13 +51,12 @@ function tracker(videos, options, f_calib, vinfo)
        % If tracker is run with arguments, make sure all fields are entered
        if nargin < 2, options = []; end
        if nargin < 3, f_calib = []; end
-       if nargin < 4, vinfo = []; end
-       run_tracker(videos,options,f_calib,vinfo);
+       if nargin < 4, vinfo_or_video_file_name = []; end
+       run_tracker(videos,options,f_calib,vinfo_or_video_file_name);
    end
 end
 
-function run_tracker(videos, options, f_calib, vinfo)
-
+function run_tracker(videos, options, f_calib, vinfo_or_video_file_name)
    % default options
    options_def = DefaultOptions();
    
@@ -104,7 +103,13 @@ function run_tracker(videos, options, f_calib, vinfo)
    end
    
    % collect video information
-   if nargin > 3 && ~isempty(vinfo)
+   if nargin > 3 && ~isempty(vinfo_or_video_file_name)
+       if ischar(vinfo_or_video_file_name) || isstring(vinfo_or_video_file_name) ,
+         video_file_name = char(vinfo_or_video_file_name) ;
+         vinfo = video_open(video_file_name) ;
+       else
+         vinfo = vinfo_or_video_file_name ;
+       end
        % use given vinfo rather than videos
        [path,filename,ext] = fileparts(vinfo.filename);
        videos.dir_in = path;
@@ -167,6 +172,15 @@ function run_tracker(videos, options, f_calib, vinfo)
      return
    end
 
+   % If certain things are defined in options, want those to override values in
+   % parent calibration
+   if isfield(options, 'n_flies') ,
+     parent_calib.n_flies = options.n_flies ;
+   end   
+   if isfield(options, 'arena_r_mm') ,
+     parent_calib.arena_r_mm = options.arena_r_mm ;
+   end   
+   
    % compute maximum number of frames to process
    max_frames = round(options.max_minutes*parent_calib.FPS*60);
    endframe = options.startframe + max_frames - 1;
@@ -234,7 +248,7 @@ function run_tracker(videos, options, f_calib, vinfo)
           f_calib = fullfile(dir_vid, [name '-calibration.mat']);
       end
       % compute background and calibration if needed
-      flag = tracker_job('track_calibrate', f_vid, f_bg, f_calib, options, parent_calib, vinfo,options.force_calib);
+      flag = tracker_job('track_calibrate', f_vid, f_bg, f_calib, options, parent_calib, vinfo, options.force_calib) ;
       if check_abort(flag), return; end
       % load calibration 
       D = load(f_calib); calib = D.calib;      
