@@ -1,3 +1,11 @@
+This code is a modified version of FlyTracker
+http://www.vision.caltech.edu/Tools/FlyTracker/
+originally developed by Eyrun Eyjolfsdottir and Pietro Perona. The license for the original code is below. It was modified by Kristin Branson and Adam Taylor. Please see the git log for details on modifications. 
+
+******************************
+
+Original license:
+
 Copyright (c) 2015, Eyrun Eyjolfsdottir, California Institute of Technology
 All rights reserved.
 
