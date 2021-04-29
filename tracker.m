@@ -180,6 +180,9 @@ function run_tracker(videos, options, f_calib, vinfo_or_video_file_name)
    if isfield(options, 'arena_r_mm') ,
      parent_calib.arena_r_mm = options.arena_r_mm ;
    end   
+   if isfield(options,'n_flies_is_max'),
+     parent_calib.n_flies_is_max = options.n_flies_is_max;
+   end
    
    % compute maximum number of frames to process
    max_frames = round(options.max_minutes*parent_calib.FPS*60);

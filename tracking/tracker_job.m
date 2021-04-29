@@ -186,8 +186,16 @@ function flag = tracker_job_process(f_vid, f_bg, f_calib, f_trks, fr, vinfo)
       end
       count_guess = prctile(sort(count_num_flies),95);
       fert_guess = prctile(sort(ferts),95);
-      if count_guess < calib.n_flies && count_guess == fert_guess
-          calib.n_flies = count_guess;
+      if isfield(calib,'n_flies_is_max'),
+        n_flies_is_max = calib.n_flies_is_max;
+      else
+        n_flies_is_max = false;
+      end
+      if count_guess < calib.n_flies && (count_guess == fert_guess || n_flies_is_max),
+        if count_guess ~= fert_guess,
+          warning('Counting number of flies: count_guess %d != fert_guess %d. ',count_guess,fert_guess);
+        end
+        calib.n_flies = count_guess;
       end
       fprintf('n. flies = %d\n',calib.n_flies);
       % match detections into tracklets

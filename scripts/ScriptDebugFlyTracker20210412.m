@@ -2,24 +2,36 @@
 %expdir = '/groups/branson/home/bransonk/tracking/code/FlyTracker-1.0.5/Data/socialCsChr_GMR_72C11_AE_01_CsChrimson_RigD_20191114T172654';
 %expdir0 = '/groups/branson/home/robiea/Projects_data/FlyDisco/Bubble_data/nochr_TrpA71G01_Unknown_RigA_20201216T162938';
 
-% alice data for which orientation errors have been identified
-expdir0 = '/groups/branson/home/robiea/Projects_data/FlyDisco/Bubble_data/nochr_TrpApBDP_Unknown_RigB_20201216T160731';
-calibfile0 = '/groups/branson/home/bransonk/behavioranalysis/code/FlyDiscoAnalysis/settings/current_non_olympiad_dickson_VNC/parent_calibration_bubble20210218.mat';
-calibfile = '/groups/branson/home/bransonk/tracking/code/FlyTracker-1.0.5/Data/parent_calibration_bubble_dickson_VNC_20210413.mat';
-trkfile0 = fullfile(expdir0,'flytracker','movie','movie-track.mat');
+data_type = 'ming';
 
-% katie's RGB bowl
-expdir0 = '/groups/branson/bransonlab/flydisco_example_experiments_read_only/FlyBowlRGB/20210401T134552_rig1_flyBowl4__aIPgSS1UASCsChrimson_KS_redonly_protocolRGB_0315_2';
-calibfile0 = '/groups/branson/home/bransonk/behavioranalysis/code/FlyDiscoAnalysis/settings/20210329_flybubble_FlyBowlRGB_LED/flytracker-parent-calibration_20210329.mat';
-calibfile = '/groups/branson/home/bransonk/tracking/code/FlyTracker-1.0.5/Data/parent_calibration_bubble_FlyBowlRGB_LED_20210413.mat';
-trkfile0 = '';
+switch data_type,
+  
+  case 'alice',
+    
+    % alice data for which orientation errors have been identified
+    expdir0 = '/groups/branson/home/robiea/Projects_data/FlyDisco/Bubble_data/nochr_TrpApBDP_Unknown_RigB_20201216T160731';
+    calibfile0 = '/groups/branson/home/bransonk/behavioranalysis/code/FlyDiscoAnalysis/settings/current_non_olympiad_dickson_VNC/parent_calibration_bubble20210218.mat';
+    calibfile = '/groups/branson/home/bransonk/tracking/code/FlyTracker-1.0.5/Data/parent_calibration_bubble_dickson_VNC_20210413.mat';
+    trkfile0 = fullfile(expdir0,'flytracker','movie','movie-track.mat');
+    
+  case 'katie',
+    
+    % katie's RGB bowl
+    expdir0 = '/groups/branson/bransonlab/flydisco_example_experiments_read_only/FlyBowlRGB/20210401T134552_rig1_flyBowl4__aIPgSS1UASCsChrimson_KS_redonly_protocolRGB_0315_2';
+    calibfile0 = '/groups/branson/home/bransonk/behavioranalysis/code/FlyDiscoAnalysis/settings/20210329_flybubble_FlyBowlRGB_LED/flytracker-parent-calibration_20210329.mat';
+    calibfile = '/groups/branson/home/bransonk/tracking/code/FlyTracker-1.0.5/Data/parent_calibration_bubble_FlyBowlRGB_LED_20210413.mat';
+    trkfile0 = '';
 
-% ming's bowl
-expdir0 = '/groups/branson/bransonlab/flydisco_example_experiments_read_only/FlyBowlOpto/SS36564_20XUAS_CsChrimson_mVenus_attP18_flyBowlMing_20200227_Continuous_2min_5int_20200107_20200229T132141';
-calibfile0 = '/groups/branson/home/bransonk/behavioranalysis/code/FlyDiscoAnalysis/settings/20190712_flybubble_flybowloptoKatie_mingrig_flytracker/flytracker-parent-calibration.mat';
-calibfile = '/groups/branson/home/bransonk/tracking/code/FlyTracker-1.0.5/Data/parent_calibration_bubble_mingrig_20210413.mat';
-trkfile0 = '';
+  case 'ming',
+    
+    % ming's bowl
+    expdir0 = '/groups/branson/bransonlab/flydisco_example_experiments_read_only/FlyBowlOpto/SS36564_20XUAS_CsChrimson_mVenus_attP18_flyBowlMing_20200227_Continuous_2min_5int_20200107_20200229T132141';
+    calibfile0 = '/groups/branson/home/bransonk/behavioranalysis/code/FlyDiscoAnalysis/settings/20190712_flybubble_flybowloptoKatie_mingrig_flytracker/flytracker-parent-calibration.mat';
+    calibfile = '/groups/branson/home/bransonk/tracking/code/FlyTracker-1.0.5/Data/parent_calibration_bubble_mingrig_20210413.mat';
+    trkfile0 = '';
 
+end
+    
 datadir = '/groups/branson/home/bransonk/tracking/code/FlyTracker-1.0.5/Data';
 [~,expname] = fileparts(expdir0);
 expdir = fullfile(datadir,expname);
@@ -77,7 +89,8 @@ end
 load(calibfile);
 
 options = struct;
-options.num_cores   = 1;
+%options.num_cores   = 1;
+options.num_cores   = maxNumCompThreads;
 options.num_chunks = [];
 options.save_JAABA  = true;
 options.save_xls    = false;
@@ -85,11 +98,12 @@ options.save_seg    = false;
 options.force_calib = true;
 options.expdir_naming = true;
 options.fr_samp = 200;
-options.max_minutes = 200/calib.FPS/60;
+%options.max_minutes = 200/calib.FPS/60;
 options.f_parent_calib = calibfile;
 options.force_tracking = true;
 options.force_features = true;
-options.startframe = 3351;
+options.n_flies_is_max = true;
+%options.startframe = 3351;
 
 outmoviefile = fullfile(expdir,'movie.ufmf');
 FlyTrackerWrapper(outmoviefile,options.num_cores,options);
