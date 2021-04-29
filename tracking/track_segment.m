@@ -42,9 +42,12 @@ function trks = track_segment(trks, calib, show_progress, chamber_str)
     DEBUGPLOT = false;
     DEBUG_seq_id = nan;
     DEBUG_fr_idx = [];
-%    DEBUGPLOT = true;
-%    DEBUG_seq_id = 14;
-%    DEBUG_fr_idx = 1:64;
+%     DEBUGPLOT = true;
+%     DEBUG_seq_id = 14;
+%     DEBUG_fr_idx = 1:64;
+    if ~trks_matched,
+      DEBUGPLOT = false;
+    end
     if DEBUGPLOT,
       figure(5);
       clf;
@@ -509,7 +512,7 @@ function trks = track_segment(trks, calib, show_progress, chamber_str)
                     rot_vec = [cos(ori) -sin(ori)];
                     rot_vec_flip = [cos(ori+pi) -sin(ori+pi)];
                     
-                    DEBUGCURR = DEBUGPLOT && DEBUG_seq_id == seq_id && ismember(fr_idx,DEBUG_fr_idx);
+                    DEBUGCURR = DEBUGPLOT && trks_matched && DEBUG_seq_id == seq_id && ismember(fr_idx,DEBUG_fr_idx);
                     if DEBUGCURR,
                       axi = find(fr_idx==DEBUG_fr_idx,1);
                       image(cat(3,bod_im,fg_is_wing,fg_im),'Parent',hax(axi));
@@ -634,9 +637,10 @@ function trks = track_segment(trks, calib, show_progress, chamber_str)
                     end
                     
                     if DEBUGCURR,
-                      text(1,1,sprintf('  fr = %d, wings = %d, %d, flip = %d, vel = %d',...
+                      xlim = get(hax(axi),'XLim');
+                      text(mean(xlim),1,sprintf('fr = %d, wings = %d, %d, flip = %d, vel = %d',...
                         fr_idx,trust_wings,trust_wings_flip,doflip_save{seq_id}(fr_idx),trust_vel_save{seq_id}(fr_idx)),'Parent',hax(axi),...
-                        'HorizontalAlignment','left','VerticalAlignment','top','Color','w','FontSize',8);
+                        'HorizontalAlignment','center','VerticalAlignment','top','Color','w','FontSize',8);
                     end
 
                     if numel(inds)>2, inds = inds(1:2); end
@@ -734,7 +738,7 @@ function trks = track_segment(trks, calib, show_progress, chamber_str)
             end
           end
           if trust_vel,
-            appearancecost(1,fr) = appearancecost(1,fr)+1; % always prefer not to flip
+            appearancecost(2,fr) = appearancecost(2,fr)+1; % always prefer not to flip
           end
           weight_theta = nan(size(orientations{s}));
           weight_theta(:) = params.choose_orientations_weight_theta;

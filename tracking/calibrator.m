@@ -1232,8 +1232,6 @@ function acceptChambers(~,~)
     hs(2) = plot(-1,-1,'o','markerEdgeColor','k','markerFaceColor',const.clr.wings,'markersize',10,'linewidth',1);
     hs(3) = plot(-1,-1,'o','markerEdgeColor','k','markerFaceColor',const.clr.legs,'markersize',10,'linewidth',1);
     hs(4) = plot(-1,-1,'o','markerEdgeColor','k','markerFaceColor','w','markersize',10,'linewidth',1);
-    legend(hs,{'body','wings','legs','other'},'FontSize',fs*11);
-    legend('boxoff')
 
     % update image to white out background
     img = vars.img;
@@ -1264,6 +1262,10 @@ function acceptChambers(~,~)
     vars.dets = track_detect(vinfo,bg,calib,[],{img});  
     vars.dets = track_segment(vars.dets,calib,0);
     updateSeg()
+    
+    legend(hs,{'body','wings','legs','other'},'FontSize',fs*11,'AutoUpdate','off');
+    legend('boxoff')
+
 end
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -1271,9 +1273,10 @@ end
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 function updateSeg() 
     % remove previous segmentation overlay
-    for i=1:numel(handles.seg_h)
-        delete(handles.seg_h(i));
-    end
+    delete(handles.seg_h(ishandle(handles.seg_h)));
+%     for i=1:numel(handles.seg_h),
+%         delete(handles.seg_h(i));
+%     end
 
     pointsize = vars.pointsize;
     

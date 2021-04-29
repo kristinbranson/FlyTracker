@@ -30,44 +30,47 @@ end
 disp(expdir);
 
 %% add new calib params
-if isempty(trkfile0),
-  
-  calibfile1 = fullfile(expdir,'calibration.mat');
-  if ~exist(calibfile1,'file'),
-    fprintf('Calibrate video now!\n');
-    keyboard;
+
+if ~exist(calibfile,'file'),
+  if isempty(trkfile0),
+    
+    calibfile1 = fullfile(expdir,'calibration.mat');
+    if ~exist(calibfile1,'file'),
+      fprintf('Calibrate video now!\n');
+      keyboard;
+    end
+    
+    tmp1 = load(calibfile1);
+    tmp2 = load(calibfile0);
+    fprintf('original ppm = %f, new = %f\n',tmp2.calib.PPM,tmp1.calib.PPM);
+    fns = setdiff(fieldnames(tmp1.calib.params),fieldnames(tmp2.calib.params));
+    for i = 1:numel(fns),
+      tmp2.calib.params.(fns{i}) = tmp1.calib.params.(fns{i});
+    end
+    save(calibfile,'-struct','tmp2');
+    
+  else
+    
+    load(calibfile0);
+    load(trkfile0);
+    areai = find(strcmpi(trk.names,'body area'));
+    maji = find(strcmpi(trk.names,'major axis len'));
+    mini = find(strcmpi(trk.names,'minor axis len'));
+    body_sizes = trk.data(:,:,[maji,mini,areai]);
+    body_sizes = reshape(body_sizes,[size(body_sizes,1)*size(body_sizes,2),3]);
+    quartiles1 = prctile(body_sizes,25,1);
+    quartiles2 = prctile(body_sizes,75,1);
+    calib.params.quartile_major_axis = [quartiles1(1),quartiles2(1)];
+    calib.params.quartile_minor_axis = [quartiles1(2),quartiles2(2)];
+    calib.params.quartile_area = [quartiles1(3),quartiles2(3)];
+    
+    calib.params.choose_orientations_weight_theta = .2*calib.FPS/(2*pi);
+    vel_fil_w = ceil(calib.FPS/30); % filter for computing velocities
+    calib.params.vel_fil = normpdf(linspace(-2,2,vel_fil_w));
+    calib.params.vel_fil = calib.params.vel_fil / sum(calib.params.vel_fil);
+    calib.params.vel_fil = conv([-1,0,1]/2,calib.params.vel_fil)';
+    save(calibfile,'calib');
   end
-  
-  tmp1 = load(calibfile1);
-  tmp2 = load(calibfile0);
-  fprintf('original ppm = %f, new = %f\n',tmp2.calib.PPM,tmp1.calib.PPM);
-  fns = setdiff(fieldnames(tmp1.calib.params),fieldnames(tmp2.calib.params));
-  for i = 1:numel(fns),
-    tmp2.calib.params.(fns{i}) = tmp1.calib.params.(fns{i});
-  end
-  save(calibfile,'-struct','tmp2');
-  
-else
-  
-  load(calibfile0);
-  load(trkfile0);
-  areai = find(strcmpi(trk.names,'body area'));
-  maji = find(strcmpi(trk.names,'major axis len'));
-  mini = find(strcmpi(trk.names,'minor axis len'));
-  body_sizes = trk.data(:,:,[maji,mini,areai]);
-  body_sizes = reshape(body_sizes,[size(body_sizes,1)*size(body_sizes,2),3]);
-  quartiles1 = prctile(body_sizes,25,1);
-  quartiles2 = prctile(body_sizes,75,1);
-  calib.params.quartile_major_axis = [quartiles1(1),quartiles2(1)];
-  calib.params.quartile_minor_axis = [quartiles1(2),quartiles2(2)];
-  calib.params.quartile_area = [quartiles1(3),quartiles2(3)];
-  
-  calib.params.choose_orientations_weight_theta = .2*calib.FPS/(2*pi);
-  vel_fil_w = ceil(calib.FPS/30); % filter for computing velocities
-  calib.params.vel_fil = normpdf(linspace(-2,2,vel_fil_w));
-  calib.params.vel_fil = calib.params.vel_fil / sum(calib.params.vel_fil);
-  calib.params.vel_fil = conv([-1,0,1]/2,calib.params.vel_fil)';
-  save(calibfile,'calib');
 end
 
 %%
