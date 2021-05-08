@@ -45,6 +45,14 @@
 %                         feature mat file alreay exists. (default: false)
 %       expdir_naming   - Whether to use JAABA-style experiment directory
 %                         naming scheme for files. (default: false)
+%       arena_r_mm      - Radius of the arena in mm. This will be used to
+%                         set the resolution (PPM, pixels per millimeter)
+%                         if a circular arena is automatically detected.
+%       n_flies         - Number of flies. Only used when run in
+%                         non-interactive mode to override parent
+%                         calibration. (default: not defined)
+%       n_flies_is_max  - Whether n_flies is an upper limit on the number
+%                         of flies or an actual count. (default: false)
 %      
 %    f_calib            - file containing calibration data (default: [videos.dir_in]/calibration.mat)
 %    vinfo              - if specified, ignore videos and use loaded video
