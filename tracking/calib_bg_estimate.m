@@ -61,7 +61,8 @@ function bg = calib_bg_estimate(vinfo, PPM, frame_range)
    bg_soft = bg_init(vinfo.sx, vinfo.sy, vinfo.sz);
    bg_hard = bg_init(vinfo.sx, vinfo.sy, vinfo.sz);      
    % compile a list of comparison frames for finding blobs
-   n_sample = 5;
+   
+   n_sample = max(10,round(numel(frames)/10));
    chunk = round((vinfo.n_frames-10)/(n_sample-1));
    tmpframes = 2:chunk:vinfo.n_frames;
    imgs = zeros(size(im,1),size(im,2),numel(tmpframes));
@@ -92,15 +93,16 @@ function bg = calib_bg_estimate(vinfo, PPM, frame_range)
    total_diffs = sum(diffs);
    valid = total_diffs < median(total_diffs) + std(total_diffs);
    if sum(valid) < 2, valid(:) = 1; end
-   rough_mean = mean(imgs(:,:,valid),3);   
-   tmp = im-rough_mean;
+   rough_mean = median(imgs(:,:,valid),3);
+   %rough_mean = mean(imgs(:,:,valid),3);   
+   tmp = imgs(:,:,valid)-rough_mean;
    dmin = prctile(tmp(:),.1);
    dmax = prctile(tmp(:),99.9);
    params.invert = abs(dmax) > abs(dmin);   
-   if params.invert, rough_mean = 1-rough_mean; im = 1-im; end
+   if params.invert, rough_mean = 1-rough_mean; imgs = 1-imgs; end
    curr_bg = rough_mean;
    % compute difference threshold
-   im_diff = im-rough_mean;
+   im_diff = imgs(:,:,valid)-rough_mean;
    [~,b] = hist(im_diff(:),10);
    diff_th = b(4);
    prct_fg = sum(im_diff(:) < diff_th)/numel(im_diff(:));
@@ -121,7 +123,7 @@ function bg = calib_bg_estimate(vinfo, PPM, frame_range)
       % reject image if it's too different from current background image 
       %  (for instance frames in shadow experiment)
       diffr = im_gray-curr_bg;      
-      if sum(abs(diffr(:))>.1)/numel(im) > prct_th
+      if sum(abs(diffr(:))>.1)/numel(im_gray) > prct_th
           continue
       end
       % threshold      
@@ -145,12 +147,12 @@ function bg = calib_bg_estimate(vinfo, PPM, frame_range)
       prev_bg = curr_bg;
       unseen = bg_hard.bg_weight==0;
       curr_bg = bg.bg_mean .* (1-unseen) + curr_bg .* unseen;      
-      if f>=20 % more than 20 images have been processed
+      if f/numel(frames)>=.2 % more than 20 images have been processed
           diffr = abs(prev_bg-curr_bg);
           ok = diffr./median(curr_bg(:)) < .001 & ...
                bg_hard.bg_weight >= 10;
           converged(~fg_mask) = ok(~fg_mask);
-          if sum(converged(:))/numel(converged) > .995
+          if sum(converged(:))/numel(converged) == 1,
               break
           end
       end

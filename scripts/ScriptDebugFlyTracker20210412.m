@@ -2,7 +2,7 @@
 %expdir = '/groups/branson/home/bransonk/tracking/code/FlyTracker-1.0.5/Data/socialCsChr_GMR_72C11_AE_01_CsChrimson_RigD_20191114T172654';
 %expdir0 = '/groups/branson/home/robiea/Projects_data/FlyDisco/Bubble_data/nochr_TrpA71G01_Unknown_RigA_20201216T162938';
 
-data_type = 'ming';
+data_type = 'rose';
 
 switch data_type,
   
@@ -29,18 +29,32 @@ switch data_type,
     calibfile0 = '/groups/branson/home/bransonk/behavioranalysis/code/FlyDiscoAnalysis/settings/20190712_flybubble_flybowloptoKatie_mingrig_flytracker/flytracker-parent-calibration.mat';
     calibfile = '/groups/branson/home/bransonk/tracking/code/FlyTracker-1.0.5/Data/parent_calibration_bubble_mingrig_20210413.mat';
     trkfile0 = '';
-
+    
+  case 'rose',
+    moviefile = '/groups/branson/home/bransonk/tracking/code/FlyTracker-1.0.5/Data/PlaceLearningSampleVideos/trial_004_20210222T110327_guid_496a37b527d73338159066e38c7ace6.ufmf';
+    [p,n] = fileparts(moviefile);
+    expdir = fullfile(p,n);
+    if ~exist(expdir,'dir'),
+      mkdir(expdir);
+    end
+    if ~exist(fullfile(expdir,'movie.ufmf'),'file'),
+      unix(sprintf('ln -s %s %s/movie.ufmf',moviefile,expdir));
+    end
+    assert(exist(fullfile(expdir,'movie.ufmf'),'file')>0);
+    calibfile = '/groups/branson/home/bransonk/tracking/code/FlyTracker-1.0.5/Data/parent_calibration_placelearning_rose_20210505.mat';
+    arena_r_mm = 185/2;
 end
     
-datadir = '/groups/branson/home/bransonk/tracking/code/FlyTracker-1.0.5/Data';
-[~,expname] = fileparts(expdir0);
-expdir = fullfile(datadir,expname);
-if ~exist(expdir,'dir'),
-  mkdir(expdir);
-  unix(sprintf('ln -s %s/movie.ufmf %s/movie.ufmf',expdir0,expdir));
+if ~strcmpi(data_type,'rose'),
+  datadir = '/groups/branson/home/bransonk/tracking/code/FlyTracker-1.0.5/Data';
+  [~,expname] = fileparts(expdir0);
+  expdir = fullfile(datadir,expname);
+  if ~exist(expdir,'dir'),
+    mkdir(expdir);
+    unix(sprintf('ln -s %s/movie.ufmf %s/movie.ufmf',expdir0,expdir));
+  end
+  disp(expdir);
 end
-disp(expdir);
-
 %% add new calib params
 
 if ~exist(calibfile,'file'),
@@ -104,6 +118,10 @@ options.force_tracking = true;
 options.force_features = true;
 options.n_flies_is_max = true;
 %options.startframe = 3351;
+
+if strcmpi(data_type,'rose'),
+  options.arena_r_mm = arena_r_mm;
+end
 
 outmoviefile = fullfile(expdir,'movie.ufmf');
 FlyTrackerWrapper(outmoviefile,options.num_cores,options);

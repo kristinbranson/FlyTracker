@@ -598,14 +598,63 @@ function setResolution(~,~)
     % fill in our best guess for number of flies
     tmp_vinfo = vinfo;
     im = video_read_frame(tmp_vinfo,0);    
-    bw_diff = abs(im-bg.bg_mean);
+    if bg.invert,
+      bw_diff = abs((1-im)-bg.bg_mean);
+    else
+      bw_diff = abs(im-bg.bg_mean);
+    end
+
     [~,b] = hist(bw_diff(:),10);
     thresh = b(5);    
     
-    frames = [0 vinfo.n_frames-2 floor(vinfo.n_frames/2)];
+    
+    hfigbg = findall(0,'Name','Background model','type','figure');
+    if isempty(hfigbg),
+      hfigbg = figure('Name','Background model');
+    else
+      hfigbg = hfigbg(1);
+      clf(hfigbg);
+    end
+    if bg.invert,
+      bg_mean = 1 - bg.bg_mean;
+    end
+    haxbg(1) = subplot(1,3,1,'Parent',hfigbg);
+    if ndims(bg_mean) == 3,
+      image(bg_mean,'Parent',haxbg(1));
+    else      
+      imagesc(bg_mean,'Parent',haxbg(1),[0,1]);
+    end
+    title(haxbg(1),'Bg Mean');
+    haxbg(2) = subplot(1,3,2,'Parent',hfigbg);
+    if ndims(bg.bg_var) == 3,
+      image(bg.bg_var,'Parent',haxbg(2));
+    else      
+      imagesc(bg.bg_var,'Parent',haxbg(2),[0,prctile(bg.bg_var(:),99)]);
+    end
+    title(haxbg(2),'Bg Var');
+    haxbg(3) = subplot(1,3,3,'Parent',hfigbg);
+    if ndims(im) == 3,
+      image(im,'Parent',haxbg(3));
+    else
+      imagesc(im,'Parent',haxbg(3),[0,1]);
+    end
+    title(haxbg(3),'Sample image');
+    axis(haxbg,'image');
+    linkaxes(haxbg);
+    colormap(hfigbg,'gray');
+    impixelinfo(hfigbg);
+    
+    frames = unique(round(linspace(0,vinfo.n_frames-2,20)));
+    %frames = [0 vinfo.n_frames-2 floor(vinfo.n_frames/2)];
     blob_count = zeros(1,numel(frames));
+    fprintf('Number of flies counted per frame:\n');
     for i=1:numel(frames) 
-        bw_diff = abs(video_read_frame(tmp_vinfo,frames(i))-bg.bg_mean);
+        im = video_read_frame(tmp_vinfo,frames(i));
+        if bg.invert,
+          bw_diff = abs((1-im)-bg.bg_mean);
+        else
+          bw_diff = abs(im-bg.bg_mean);
+        end
         bw_th_diff = bw_diff > thresh;
         cc = bwconncomp(bw_th_diff);
         props = regionprops(cc,{'MinorAxisLength','MajorAxisLength','Centroid'});
@@ -621,15 +670,21 @@ function setResolution(~,~)
             end
         end
         blob_count(i) = n_candidates;
+        fprintf('  Frame %d: %d flies\n',frames(i),blob_count(i));
     end        
     vars.total_n_flies = median(blob_count);
     set(handles.h_n_flies,'String',num2str(vars.total_n_flies)); 
     set(handles.h_n_chambers,'String','1');
 
-    % update image to white out background
-    bw_diff = 1-abs(vars.img-bg.bg_mean);        
-    bw_diff = (bw_diff-min(bw_diff(:)))/(max(bw_diff(:))-min(bw_diff(:)));
-    set(handles.im_h,'cdata',(2*bw_diff+vars.img)/3);
+%     % update image to white out background
+%     if bg.invert,
+%       bw_diff = 1-abs((1-vars.img)-bg.bg_mean);
+%     else
+%       bw_diff = 1-abs(vars.img-bg.bg_mean);
+%     end
+%     bw_diff = (bw_diff-min(bw_diff(:)))/(max(bw_diff(:))-min(bw_diff(:)));
+%     set(handles.im_h,'cdata',(2*bw_diff+vars.img)/3);
+    set(handles.im_h,'cdata',vars.img);
 
     % make next step visible
     cover_position = get(handles.h_cover,'Position');
@@ -1235,7 +1290,11 @@ function acceptChambers(~,~)
 
     % update image to white out background
     img = vars.img;
-    bw_diff = 1-abs(img-bg.bg_mean);        
+    if bg.invert,
+      bw_diff = 1-abs((1-img)-bg.bg_mean);
+    else
+      bw_diff = 1-abs(img-bg.bg_mean);
+    end
     bw_diff = (bw_diff-min(bw_diff(:)))/(max(bw_diff(:))-min(bw_diff(:)));
     im_disp = (2*bw_diff+img)/3;
     im_disp(~calib.mask) = im_disp(~calib.mask)*.8;
@@ -1423,7 +1482,11 @@ function randomPic(~,~)
     vars.dets = track_detect(vinfo,bg,calib,[],{img});
     vars.dets = track_segment(vars.dets,calib,0);
     % update image to white out background
-    bw_diff = 1-abs(img-bg.bg_mean);            
+    if bg.invert,
+      bw_diff = 1-abs((1-img)-bg.bg_mean);
+    else
+      bw_diff = 1-abs(img-bg.bg_mean);
+    end
     bw_diff = (bw_diff-min(bw_diff(:)))/(max(bw_diff(:))-min(bw_diff(:)));
     im_disp = (2*bw_diff+img)/3;
     im_disp(~calib.mask) = im_disp(~calib.mask)*.8;
