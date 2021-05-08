@@ -24,6 +24,27 @@
 %       save_JAABA      - write JAABA folders from features? (default: false)
 %       save_xls        - save tracks and feats to xls? (default: false)
 %       save_seg        - save segmentation from tracking process? (default: false)
+%       f_parent_calib  - path to parent calibration file -- defines
+%                         parameters that are usually preserved within
+%                         videos of the same rig based on a calibration
+%                         file from a different video. If not
+%                         defined/empty, all parameters are estimated from
+%                         this video.                          
+%       fr_samp         - Number of frames to sample when computing
+%                         background model. (default: 100)
+%       isdisplay       - Whether display is available for waitbars etc.
+%       startframe      - Frame to start tracking on. Default = 1
+%       force_all       - Whether to force all computations, regardless of
+%                         whether the files these computations would
+%                         compute already exist. (default: false)
+%       force_calib     - Whether to run calibration even if calibration
+%                         mat file already exists. (default: false)
+%       force_tracking  - Whether to run tracking, even if track files
+%                         already exist. (default: false)
+%       force_features  - Whether to run feature computation even if
+%                         feature mat file alreay exists. (default: false)
+%       expdir_naming   - Whether to use JAABA-style experiment directory
+%                         naming scheme for files. (default: false)
 %      
 %    f_calib            - file containing calibration data (default: [videos.dir_in]/calibration.mat)
 %    vinfo              - if specified, ignore videos and use loaded video
