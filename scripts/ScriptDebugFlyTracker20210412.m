@@ -2,7 +2,7 @@
 %expdir = '/groups/branson/home/bransonk/tracking/code/FlyTracker-1.0.5/Data/socialCsChr_GMR_72C11_AE_01_CsChrimson_RigD_20191114T172654';
 %expdir0 = '/groups/branson/home/robiea/Projects_data/FlyDisco/Bubble_data/nochr_TrpA71G01_Unknown_RigA_20201216T162938';
 
-data_type = 'rose';
+data_type = 'alice';
 
 switch data_type,
   
