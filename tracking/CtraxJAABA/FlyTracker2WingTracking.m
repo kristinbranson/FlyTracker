@@ -31,6 +31,16 @@ outtrx = intrx;
 nflies = numel(intrx.trx);
 reginfo = load(fullfile(expdir,dataloc_params.registrationmatfilestr));
 
+try
+  registrationmatfile = fullfile(expdir,dataloc_params.registrationmatfilestr);
+  load(registrationmatfile,'newid2oldid');
+catch
+  warning('Could not load newid2oldid from registration file, assuming flytracker data and trx data match');
+  newid2oldid = 1:nflies;
+  assert(nflies == size(ftd.trk.data,1));
+end
+
+
 [outtrx.trx.annname] = deal(fullfile(expdir,dataloc_params.annfilestr));
 arena = struct;
 arena.x = reginfo.circleCenterX;
@@ -46,27 +56,34 @@ fidx.wing_lengthr = find(strcmp(ftd.trk.names,'wing r len'));
 
 nwingsdetected = cell(1,nflies);
 % remove nans
+
+alllengths = ftd.trk.data(:,:,[fidx.wing_lengthl,fidx.wing_lengthr]);
+medianlength = nanmedian(alllengths(:));
+
 for i = 1:nflies,
   
-  [ftd.trk.data(i,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_anglel),...
-    ftd.trk.data(i,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_lengthl),...
-    outtrx.trx(i).xwingl,outtrx.trx(i).ywingl,ismissingl] = ...
-    FixWingNaNs(ftd.trk.data(i,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_anglel),...
-    ftd.trk.data(i,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_lengthl),i);
+  id = newid2oldid(i);
   
-  [ftd.trk.data(i,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_angler),...
-    ftd.trk.data(i,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_lengthr),...
+  [ftd.trk.data(id,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_anglel),...
+    ftd.trk.data(id,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_lengthl),...
+    outtrx.trx(i).xwingl,outtrx.trx(i).ywingl,ismissingl] = ...
+    FixWingNaNs(ftd.trk.data(id,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_anglel),...
+    ftd.trk.data(id,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_lengthl),i);
+  
+  [ftd.trk.data(id,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_angler),...
+    ftd.trk.data(id,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_lengthr),...
     outtrx.trx(i).xwingr,outtrx.trx(i).ywingr,ismissingr] = ...
-    FixWingNaNs(ftd.trk.data(i,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_angler),...
-    ftd.trk.data(i,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_lengthr),i);
+    FixWingNaNs(ftd.trk.data(id,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_angler),...
+    ftd.trk.data(id,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_lengthr),i);
   nwingsdetected{i} = double(~ismissingl) + double(~ismissingr);
 
 end
 
 % minus sign is important here!
 for i = 1:numel(outtrx.trx),
-  outtrx.trx(i).wing_anglel = -ftd.trk.data(i,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_anglel);
-  outtrx.trx(i).wing_angler = -ftd.trk.data(i,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_angler);
+  id = newid2oldid(i);
+  outtrx.trx(i).wing_anglel = -ftd.trk.data(id,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_anglel);
+  outtrx.trx(i).wing_angler = -ftd.trk.data(id,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_angler);
 end
 
 outtrxfile = fullfile(expdir,dataloc_params.wingtrxfilestr);
@@ -80,7 +97,8 @@ end
 fn = 'wing_anglel';
 data = cell(1,nflies);
 for i = 1:nflies,
-  data{i} = -ftd.trk.data(i,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.(fn));
+  id = newid2oldid(i);
+  data{i} = -ftd.trk.data(id,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.(fn));
 end
 units.num = {'rad'};
 units.den = cell(1,0);
@@ -90,7 +108,8 @@ save(fullfile(perframedir,[fn,'.mat']),'data','units');
 fn = 'wing_angler';
 data = cell(1,nflies);
 for i = 1:nflies,
-  data{i} = -ftd.trk.data(i,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.(fn));
+  id = newid2oldid(i);
+  data{i} = -ftd.trk.data(id,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.(fn));
 end
 units.num = {'rad'};
 units.den = cell(1,0);
@@ -112,7 +131,8 @@ else
 end  
 data = cell(1,nflies);
 for i = 1:nflies,
-  data{i} = ftd.trk.data(i,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.(ffn));
+  id = newid2oldid(i);
+  data{i} = ftd.trk.data(id,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.(ffn));
 end
 save(fullfile(perframedir,[cfn,'.mat']),'data','units','notes');
 
@@ -132,7 +152,8 @@ else
 end  
 data = cell(1,nflies);
 for i = 1:nflies,
-  data{i} = ftd.trk.data(i,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.(ffn));
+  id = newid2oldid(i);
+  data{i} = ftd.trk.data(id,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.(ffn));
 end
 save(fullfile(perframedir,[cfn,'.mat']),'data','units','notes');
 
@@ -140,8 +161,9 @@ save(fullfile(perframedir,[cfn,'.mat']),'data','units','notes');
 cfn = 'wing_trough_angle';
 data = cell(1,nflies);
 for i = 1:nflies,
-  data{i} = -.5*modrange(ftd.trk.data(i,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_anglel)+...
-    ftd.trk.data(i,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_angler),-pi,pi);
+  id = newid2oldid(i);
+  data{i} = -.5*modrange(ftd.trk.data(id,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_anglel)+...
+    ftd.trk.data(id,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_angler),-pi,pi);
 end
 units.num = {'rad'};
 units.den = cell(1,0);
@@ -167,7 +189,9 @@ save(fullfile(perframedir,[cfn,'.mat']),'data','units');
     angle(ismissing_angle) = 0;
     
     % interpolate
-    if any(ismissing_l),
+    if all(ismissing_l),
+      l(:) = medianlength;
+    elseif any(ismissing_l),
       l(ismissing_l) = interp1(find(~ismissing_l),l(~ismissing_l),find(ismissing_l));
     end
     
