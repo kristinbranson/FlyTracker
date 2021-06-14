@@ -2,7 +2,7 @@
 %expdir = '/groups/branson/home/bransonk/tracking/code/FlyTracker-1.0.5/Data/socialCsChr_GMR_72C11_AE_01_CsChrimson_RigD_20191114T172654';
 %expdir0 = '/groups/branson/home/robiea/Projects_data/FlyDisco/Bubble_data/nochr_TrpA71G01_Unknown_RigA_20201216T162938';
 
-data_type = 'alice';
+data_type = 'rose';
 
 switch data_type,
   
@@ -112,7 +112,7 @@ options.save_seg    = false;
 options.force_calib = true;
 options.expdir_naming = true;
 options.fr_samp = 200;
-%options.max_minutes = 200/calib.FPS/60;
+options.max_minutes = 200/calib.FPS/60;
 options.f_parent_calib = calibfile;
 options.force_tracking = true;
 options.force_features = true;
