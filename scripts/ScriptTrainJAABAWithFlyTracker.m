@@ -1,37 +1,75 @@
 %% retrain JAABA classifier using FlyTracker tracks
 
-if ispc,
-  addpath ../Jdetect/perframe;
-else
-  addpath /groups/branson/home/bransonk/behavioranalysis/code/Jdetect/Jdetect/perframe;
-end
-SetUpJAABAPath;
 
-behavior = 'chase';
-rootoutdir = ['/groups/branson/home/bransonk/behavioranalysis/data/JAABAFlyTracker/Data_',behavior];
-jabdir = '/groups/branson/home/robiea/Projects_data/JAABA/ProjectFiles_jab';
-outjabdir = '/groups/branson/home/bransonk/behavioranalysis/data/JAABAFlyTracker/ProjectFiles_jab';
-jabfile = fullfile(jabdir,'ChaseAR_new_v10p0.jab');
-outjabfile = fullfile(outjabdir,'ChaseAR_new_v10p0_FT.jab');
-codedir = fileparts(mfilename('fullpath'));
-fbadir = '/groups/branson/bransonlab/projects/olympiad/FlyBowlAnalysis';
-rootdatadir = '/nearline/branson/bowl_data';
-protocol = 'current';
+%behavior = 'chase'; 
+behavior = 'FeAgg';
+fakectraxnames = false;
 
-if ispc,
-  jabfile = JaneliaLinux2WinPath(jabfile);
-  rootoutdir = JaneliaLinux2WinPath(rootoutdir);
-  fbadir = JaneliaLinux2WinPath(fbadir);
-  rootdatadir = JaneliaLinux2WinPath(rootdatadir);
-  outjabdir = JaneliaLinux2WinPath(outjabdir);
-  outjabfile = JaneliaLinux2WinPath(outjabfile);
-end
-addpath(fbadir);
-if ~exist(outjabdir,'dir'),
-  mkdir(outjabdir);
+switch behavior,
+  case 'chase',
+    jaabaloc = '/groups/branson/home/bransonk/behavioranalysis/code/Jdetect/Jdetect/perframe';
+    rootoutdir = ['/groups/branson/home/bransonk/behavioranalysis/data/JAABAFlyTracker/Data_',behavior];
+    jabdir = '/groups/branson/home/robiea/Projects_data/JAABA/ProjectFiles_jab';
+    outjabdir = '/groups/branson/home/bransonk/behavioranalysis/data/JAABAFlyTracker/ProjectFiles_jab';
+    jabfile = fullfile(jabdir,'ChaseAR_new_v10p0.jab');
+    outjabfile = fullfile(outjabdir,'ChaseAR_new_v10p0_FT.jab');
+    codedir = fileparts(mfilename('fullpath'));
+    fbadir = '/groups/branson/bransonlab/projects/olympiad/FlyBowlAnalysis';
+    rootdatadir = '/nearline/branson/bowl_data';
+    protocol = 'current';
+    addpath(jaabaloc);
+    SetUpJAABAPath;
+    
+    if ispc,
+      jabfile = JaneliaLinux2WinPath(jabfile);
+      rootoutdir = JaneliaLinux2WinPath(rootoutdir);
+      fbadir = JaneliaLinux2WinPath(fbadir);
+      rootdatadir = JaneliaLinux2WinPath(rootdatadir);
+      outjabdir = JaneliaLinux2WinPath(outjabdir);
+      outjabfile = JaneliaLinux2WinPath(outjabfile);
+    end
+    addpath(fbadir); 
+    
+    if ~exist(outjabdir,'dir'),
+      mkdir(outjabdir);
+    end
+    doflytrack = true;
+
+  case 'FeAgg'
+    jaabaloc = 'JAABA';
+    rootoutdir = '/groups/branson/bransonlab/ForFemaleAggClassifier/FilesForFeFeAgg7Classifier_FlyTracker';
+    jabfile = '/groups/branson/bransonlab/ForFemaleAggClassifier/FilesForFeFeAgg7Classifier_Ctrax/FeAgg_v7.jab';
+    modjabfile = '/groups/branson/bransonlab/ForFemaleAggClassifier/FilesForFeFeAgg7Classifier_Ctrax/FeAgg_v7_fixpaths.jab';
+    outjabfile = '/groups/branson/bransonlab/ForFemaleAggClassifier/FeAgg_v7_FT.jab';
+    codedir = fileparts(mfilename('fullpath'));
+    fbadir = '/groups/branson/home/bransonk/behavioranalysis/code/FlyDiscoAnalysis';
+    rootdatadir = '/groups/branson/bransonlab/ForFemaleAggClassifier/FilesForFeFeAgg7Classifier_Ctrax';
+
+    protocol = '20150717_flybubble_flybowlMing';
+    addpath(fbadir);
+    modpath;
+    doflytrack = false;
+    
+    jd = load(jabfile,'-mat');
+    jdmod = jd;
+    for i = 1:numel(jd.x.expDirNames),
+      expdir0 = jd.x.expDirNames{i};
+      [~,expname] = fileparts(expdir0);
+      expdir1 = fullfile(rootdatadir,expname);
+      assert(exist(expdir1,'dir')>0);
+      jdmod.x.expDirNames{i} = expdir1;
+    end
+    jdmod.x.gtExpDirNames = cell(1,0);
+    jdmod.x.gtLabels(:) = [];
+    save(modjabfile,'-struct','jdmod','-mat');
+    
+    jabfile = modjabfile;
+  otherwise 
+    
+    error('Not implemented: behavior = %s',behavior);
+    
 end
   
-
 dataloc_params = ReadParams(fullfile(fbadir,'settings',protocol,'dataloc_params.txt'));
 dataloc_params.flytrackertrackstr = 'movie-track.mat';
 
@@ -50,52 +88,57 @@ end
 assert(all(cellfun(@exist,expdirs_train)>0));
 
 %% track all experiments in the jab file using FlyTracker
-ncores = 16;
 
-for moviei = 1:numel(expdirs_train),
-
-  expdir = expdirs_train{moviei};
-  [~,expname] = fileparts(expdir);
-  outexpdir = fullfile(rootoutdir,expname);
-  outmoviefile = fullfile(outexpdir,dataloc_params.moviefilestr);
-  moviefile = fullfile(expdir,dataloc_params.moviefilestr);
-  [~,vidname] = fileparts(dataloc_params.moviefilestr);
-  trkfile = fullfile(outexpdir,[vidname '-track.mat']);
+if doflytrack,
   
-  if ~exist(outexpdir,'dir'),
-    mkdir(outexpdir);
-  end
-  if ~exist(outmoviefile,'file'),
-    unix(sprintf('ln -s %s %s',moviefile,outmoviefile));
-  end
-
-  options.num_cores   = maxNumCompThreads;
-  options.num_chunks = options.num_cores*2;
-  options.save_JAABA  = true;
-  options.save_xls    = false;
-  options.save_seg    = false;
-  options.f_parent_calib = '/groups/branson/home/bransonk/behavioranalysis/code/SSRNN/SSRNN/Data/bowl/calibration20190712.mat';
-  options.force_calib = true;
-  options.expdir_naming = true;
-  options.fr_sample = 200;
+  ncores = 16;
   
-  if exist(trkfile,'file'),
-    fprintf('Tracking done for %s, skipping.\n',expname);
-  else
-    jobid = sprintf('FT%s%02d',behavior,moviei);
-    logfile = fullfile(outexpdir,'FlyTracker.log');
-    shfile = fullfile(outexpdir,'FlyTracker.sh');
-    fid = fopen(shfile,'w');
-    fprintf(fid,'cd %s; matlab -nodisplay -r "FlyTrackerWrapper(''%s'',%d)"',codedir,outmoviefile,ncores);
-    fclose(fid);
-    unix(sprintf('chmod u+x %s',shfile));
-    cmd2 = sprintf('bsub -n %d -R"affinity[core(1)]" -o %s -J %s "%s"',ncores,logfile,jobid,shfile);
-    cmd3 = sprintf('ssh login1 ''source /etc/profile; %s''',cmd2);
-    unix(cmd3);
+  for moviei = 1:numel(expdirs_train),
+    
+    expdir = expdirs_train{moviei};
+    [~,expname] = fileparts(expdir);
+    outexpdir = fullfile(rootoutdir,expname);
+    outmoviefile = fullfile(outexpdir,dataloc_params.moviefilestr);
+    moviefile = fullfile(expdir,dataloc_params.moviefilestr);
+    [~,vidname] = fileparts(dataloc_params.moviefilestr);
+    trkfile = fullfile(outexpdir,[vidname '-track.mat']);
+    
+    if ~exist(outexpdir,'dir'),
+      mkdir(outexpdir);
+    end
+    if ~exist(outmoviefile,'file'),
+      unix(sprintf('ln -s %s %s',moviefile,outmoviefile));
+    end
+    
+    options.num_cores   = maxNumCompThreads;
+    options.num_chunks = options.num_cores*2;
+    options.save_JAABA  = true;
+    options.save_xls    = false;
+    options.save_seg    = false;
+    options.f_parent_calib = '/groups/branson/home/bransonk/behavioranalysis/code/SSRNN/SSRNN/Data/bowl/calibration20190712.mat';
+    options.force_calib = true;
+    options.expdir_naming = true;
+    options.fr_sample = 200;
+    
+    if exist(trkfile,'file'),
+      fprintf('Tracking done for %s, skipping.\n',expname);
+    else
+      jobid = sprintf('FT%s%02d',behavior,moviei);
+      logfile = fullfile(outexpdir,'FlyTracker.log');
+      shfile = fullfile(outexpdir,'FlyTracker.sh');
+      fid = fopen(shfile,'w');
+      fprintf(fid,'cd %s; matlab -nodisplay -r "FlyTrackerWrapper(''%s'',%d)"',codedir,outmoviefile,ncores);
+      fclose(fid);
+      unix(sprintf('chmod u+x %s',shfile));
+      cmd2 = sprintf('bsub -n %d -R"affinity[core(1)]" -o %s -J %s "%s"',ncores,logfile,jobid,shfile);
+      cmd3 = sprintf('ssh login1 ''source /etc/profile; %s''',cmd2);
+      unix(cmd3);
+    end
+    
   end
 
 end
-
+  
 % check that things are done
 isdone = false(1,numel(expdirs_train));
 for moviei = 1:numel(expdirs_train),
@@ -119,63 +162,72 @@ fprintf('%d / %d done.\n',nnz(isdone),numel(isdone));
 
 %% set timestamps to correspond to movie frame timestamps
 
-for moviei = 1:numel(expdirs_train),
-
-  expdir = expdirs_train{moviei};
-  [~,expname] = fileparts(expdir);
-  outexpdir = fullfile(rootoutdir,expname);
-  intrxfile = fullfile(outexpdir,'movie_JAABA','trx.mat');
-  outtrxfile = fullfile(outexpdir,dataloc_params.ctraxfilestr);
-  td = load(intrxfile);
-  [~,~,fid,headerinfo] = get_readframe_fcn(fullfile(outexpdir,dataloc_params.moviefilestr));
-  td.timestamps = headerinfo.timestamps'-headerinfo.timestamps(1);
-  for i = 1:numel(td.trx),
-    td.trx(i).timestamps = td.timestamps(td.trx(i).firstframe:td.trx(i).endframe)';
-    td.trx(i).dt = diff(td.trx(i).timestamps);
+if doflytrack,
+  
+  for moviei = 1:numel(expdirs_train),
+    
+    expdir = expdirs_train{moviei};
+    [~,expname] = fileparts(expdir);
+    outexpdir = fullfile(rootoutdir,expname);
+    intrxfile = fullfile(outexpdir,'movie_JAABA','trx.mat');
+    assert(exist(intrxfile,'file')>0);
+    outtrxfile = fullfile(outexpdir,dataloc_params.ctraxfilestr);
+    td = load(intrxfile);
+    [~,~,fid,headerinfo] = get_readframe_fcn(fullfile(outexpdir,dataloc_params.moviefilestr));
+    td.timestamps = headerinfo.timestamps'-headerinfo.timestamps(1);
+    for i = 1:numel(td.trx),
+      td.trx(i).timestamps = td.timestamps(td.trx(i).firstframe:td.trx(i).endframe)';
+      td.trx(i).dt = diff(td.trx(i).timestamps);
+    end
+    fclose(fid);
+    save(outtrxfile,'-struct','td');
+    
   end
-  fclose(fid);
-  save(outtrxfile,'-struct','td');
   
 end
 
 %% run FBRegisterTrx on FlyTracker outputs
 
-for moviei = 1:numel(expdirs_train),
+if doflytrack,
+  
+  for moviei = 1:numel(expdirs_train),
+    
+    expdir = expdirs_train{moviei};
+    [~,expname] = fileparts(expdir);
+    outexpdir = fullfile(rootoutdir,expname);
+    outannfile = fullfile(outexpdir,dataloc_params.annfilestr);
+    outmetadatafile = fullfile(outexpdir,dataloc_params.metadatafilestr);
+    
+    if ~exist(outannfile,'file'),
+      inannfile = fullfile(rootdatadir,expname,dataloc_params.annfilestr);
+      assert(exist(inannfile,'file')>0);
+      cmd = sprintf('ln -s %s %s',inannfile,outannfile);
+      unix(cmd);
+    end
+    if ~exist(outmetadatafile,'file'),
+      inmetadatafile = fullfile(rootdatadir,expname,dataloc_params.metadatafilestr);
+      assert(exist(inmetadatafile,'file')>0);
+      cmd = sprintf('cp %s %s/.',inmetadatafile,outexpdir);
+      unix(cmd);
+    end
+    if isempty(dir(fullfile(outexpdir,dataloc_params.configfilepattern))),
+      inprotocol = fullfile(rootdatadir,expname,dataloc_params.configfilepattern);
+      assert(~isempty(dir(inprotocol)));
+      cmd = sprintf('cp %s %s/.',inprotocol,outexpdir);
+      unix(cmd);
+    end
+    %   intrxfile = fullfile(outexpdir,'movie_JAABA','trx.mat');
+    %   outtrxfile = fullfile(outexpdir,'ctrax_results.mat');
+    %   if ~exist(outtrxfile,'file'),
+    %     assert(exist(intrxfile,'file')>0);
+    %     cmd = sprintf('ln -s %s %s',intrxfile,outtrxfile);
+    %     unix(cmd);
+    %   end
+    
+    FlyBowlRegisterTrx(outexpdir);
+    
+  end
 
-  expdir = expdirs_train{moviei};
-  [~,expname] = fileparts(expdir);
-  outexpdir = fullfile(rootoutdir,expname);
-  outannfile = fullfile(outexpdir,dataloc_params.annfilestr);
-  outmetadatafile = fullfile(outexpdir,dataloc_params.metadatafilestr);
-  
-  if ~exist(outannfile,'file'),
-    inannfile = fullfile(rootdatadir,expname,dataloc_params.annfilestr);
-    assert(exist(inannfile,'file')>0);
-    cmd = sprintf('ln -s %s %s',inannfile,outannfile);
-    unix(cmd);
-  end
-  if ~exist(outmetadatafile,'file'),
-    inmetadatafile = fullfile(rootdatadir,expname,dataloc_params.metadatafilestr);
-    assert(exist(inmetadatafile,'file')>0);
-    cmd = sprintf('cp %s %s/.',inmetadatafile,outexpdir);
-    unix(cmd);
-  end
-  if isempty(dir(fullfile(outexpdir,dataloc_params.configfilepattern))),
-    inprotocol = fullfile(rootdatadir,expname,dataloc_params.configfilepattern);
-    assert(~isempty(dir(inprotocol)));
-    cmd = sprintf('cp %s %s/.',inprotocol,outexpdir);
-    unix(cmd);
-  end
-%   intrxfile = fullfile(outexpdir,'movie_JAABA','trx.mat');
-%   outtrxfile = fullfile(outexpdir,'ctrax_results.mat');
-%   if ~exist(outtrxfile,'file'),
-%     assert(exist(intrxfile,'file')>0);
-%     cmd = sprintf('ln -s %s %s',intrxfile,outtrxfile);
-%     unix(cmd);
-%   end
-  
-  FlyBowlRegisterTrx(outexpdir);
-  
 end
 
 % check that first frames and end frames match
@@ -204,25 +256,68 @@ end
 % wing_arear <- 'wing r len'
 % wing_trough_angle <- -( 'wing l ang' + 'wing r ang' ) / 2
 
-for moviei = 1:numel(expdirs_train),
-
-  expdir = expdirs_train{moviei};
-  [~,expname] = fileparts(expdir);
-  outexpdir = fullfile(rootoutdir,expname);
-  FlyTracker2WingTracking(outexpdir,'dataloc_params',dataloc_params);
+if doflytrack,
+  
+  for moviei = 1:numel(expdirs_train),
+    
+    expdir = expdirs_train{moviei};
+    [~,expname] = fileparts(expdir);
+    outexpdir = fullfile(rootoutdir,expname);
+    FlyTracker2WingTracking(outexpdir,'dataloc_params',dataloc_params);
+    
+  end
   
 end
 
 %% run FBComputePerFrameFeatures on outputs
 
-for moviei = 1:numel(expdirs_train),
+if doflytrack,
 
+  for moviei = 1:numel(expdirs_train),
+    
+    expdir = expdirs_train{moviei};
+    [~,expname] = fileparts(expdir);
+    outexpdir = fullfile(rootoutdir,expname);
+    FlyBowlComputePerFrameFeatures(outexpdir);%,'forcecompute',false);
+    
+  end
+  
+end
+
+%% create a new feature type compatible with output of disco pipeline
+
+oldfileinfo = jd.file;
+
+if ~fakectraxnames,
+  
+  [featureLexicon,animalType] = featureLexiconFromFeatureLexiconName('flies_disco','JAABA');
+  moviei = 1;
   expdir = expdirs_train{moviei};
   [~,expname] = fileparts(expdir);
   outexpdir = fullfile(rootoutdir,expname);
-  FlyBowlComputePerFrameFeatures(outexpdir);%,'forcecompute',false);
+  pff = dir(fullfile(outexpdir,dataloc_params.perframedir,'*.mat'));
+  pff = cellfun(@(x) x(1:end-4), {pff.name}, 'UniformOutput',false);
+  lex = fieldnames(featureLexicon.perframe);
+  fprintf('Per-frame features required by flies_disco type that do not exist:\n');
+  disp(setdiff(lex,pff))
+  fprintf('Per-frame features that exist not required by fly_disco type:\n');
+  disp(setdiff(pff,lex)')
+  % biggest -> longest
+  % smallest -> shortest
+  % area_inmost -> length_inmost
+  % area_outmost -> length_outmost
+  % wing_area -> wing_length
+  assert(isempty(setdiff(lex,pff)));
   
+  jddisco = loadAnonymous('/groups/branson/home/bransonk/behavioranalysis/code/FlyDiscoAnalysis/FlyTracker/scripts/demo.jab');
+  
+  jd.featureLexiconName = jddisco.featureLexicon;
+  jd.file = jddisco.file;
+  jd.sublexiconPFNames = jddisco.sublexiconPFNames;
+  jd.windowFeaturesParams = jddisco.windowFeaturesParams;
+  jd.classifierStuff = jddisco.classifierStuff;
 end
+
 
 %% create a new jab file with the FlyTracker outputs and the reordered labels
 
@@ -237,7 +332,7 @@ for moviei = 1:numel(expdirs_train),
   
   ftrx = load(fullfile(outexpdir,jd.file.trxfilename));
   ftrx = ftrx.trx;
-  ctrx = load(fullfile(expdir,jd.file.trxfilename));
+  ctrx = load(fullfile(expdir,oldfileinfo.trxfilename));
   ctrx = ctrx.trx;
   [f2c,c2f,cost] = match_ctrax_to_flytracker(ctrx,ftrx);
   clf;

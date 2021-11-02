@@ -87,6 +87,9 @@ for i = 1:numel(outtrx.trx),
 end
 
 outtrxfile = fullfile(expdir,dataloc_params.wingtrxfilestr);
+if exist(outtrxfile,'file'),
+  delete(outtrxfile);
+end
 save(outtrxfile,'-struct','outtrx');
 
 if ~exist(perframedir,'dir'),
