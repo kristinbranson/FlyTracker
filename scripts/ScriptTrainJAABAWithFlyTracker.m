@@ -4,6 +4,7 @@
 %behavior = 'chase'; 
 behavior = 'FeAgg';
 fakectraxnames = false;
+missingtrainingdata = true;
 
 switch behavior,
   case 'chase',
@@ -41,6 +42,8 @@ switch behavior,
     jabfile = '/groups/branson/bransonlab/ForFemaleAggClassifier/FilesForFeFeAgg7Classifier_Ctrax/FeAgg_v7.jab';
     modjabfile = '/groups/branson/bransonlab/ForFemaleAggClassifier/FilesForFeFeAgg7Classifier_Ctrax/FeAgg_v7_fixpaths.jab';
     outjabfile = '/groups/branson/bransonlab/ForFemaleAggClassifier/FeAgg_v7_FT.jab';
+    gtjabfile = '/groups/branson/bransonlab/ForFemaleAggClassifier/FilesForFeFeAgg7Classifier_Ctrax/FvFagg4_grounded2.jab';
+    gtrootdir = '/groups/branson/bransonlab/ForFemaleAggClassifier/AllGT_forFvFagg4_grounded2';
     codedir = fileparts(mfilename('fullpath'));
     fbadir = '/groups/branson/home/bransonk/behavioranalysis/code/FlyDiscoAnalysis';
     rootdatadir = '/groups/branson/bransonlab/ForFemaleAggClassifier/FilesForFeFeAgg7Classifier_Ctrax';
@@ -284,46 +287,282 @@ if doflytrack,
   
 end
 
+%% fix lost training data
+
+if missingtrainingdata,
+    
+  labeltimestamp = now;
+  scorethresh = .1;
+  
+  for expi = 1:numel(expdirs_train),
+    ctrax_expdir = expdirs_train{expi};
+    JAABADetect(ctrax_expdir,'jabfiles',{jabfile},'forcecompute',true);
+  end
+  
+  jdfix = jd;
+  nfliesperexp = nan(1,numel(expdirs_train));
+  nflyframesperexp = nan(1,numel(expdirs_train));
+  nposperexp = nan(1,numel(expdirs_train));
+  nnegperexp = nan(1,numel(expdirs_train));
+  allclass = cell(1,numel(expdirs_train));
+  allscores = cell(1,numel(expdirs_train));
+  nframesperfly = cell(1,numel(expdirs_train));
+  
+  for expi = 1:numel(expdirs_train),
+    ctrax_expdir = expdirs_train{expi};
+    sd = load(fullfile(ctrax_expdir,jd.file.scorefilename{1}));
+    nframesperfly{expi} = cellfun(@numel,sd.allScores.scores);
+    scorescurr = [sd.allScores.scores{:}]/sd.allScores.scoreNorm;
+    ispos = cell(1,numel(sd.allScores.t0s));
+    for fly = 1:numel(sd.allScores.t0s),
+      ispos{fly} = false(size(sd.allScores.scores{fly}));
+      for i = 1:numel(sd.allScores.t0s{fly}),
+        ispos{fly}(sd.allScores.t0s{fly}(i):sd.allScores.t1s{fly}(i)-1) = true;
+      end
+    end
+    ispos = [ispos{:}];
+    nfliesperexp(expi) = numel(sd.allScores.scores);
+    nflyframesperexp(expi) = numel(scorescurr);
+    allscores{expi} = scorescurr;
+    isthresh = (ispos & scorescurr > scorethresh) | ...
+      (~ispos & scorescurr < scorethresh);
+    ispos = double(ispos);
+    ispos(~isthresh) = -1;
+    allclass{expi} = ispos;
+    nposperexp(expi) = nnz(ispos==1);
+    nnegperexp(expi) = nnz(ispos==0);
+  end
+
+  allscoresv = [allscores{:}];
+  allclassv = [allclass{:}];
+  npostotal = nnz(allclassv==1);
+  nnegtotal = 2*npostotal;
+  nnegpervid = ceil(nnegtotal / numel(expdirs_train));
+  
+  jdfix.behaviors.names{1} = [jdfix.behaviors.names{1},'p2l'];
+  [~,n,ext] = fileparts(jd.file.scorefilename{1});
+  jdfix.file.scorefilename{1} = [n,'p2l',ext];
+  
+  
+  nbins = 20;
+  edges = linspace(scorethresh,1,nbins+1);
+  centers = (edges(1:end-1)+edges(2:end))/2;
+  edges(end) = inf;
+  edges(1) = -inf;
+  [countspos] = histc(allscoresv(allclassv==1),edges);
+  [countsneg] = histc(-allscoresv(allclassv==0),edges);
+  fracpos = countspos(1:end-1) / sum(countspos);
+  fracneg = countsneg(1:end-1) / sum(countsneg);
+  assert(all(fracpos>0));
+  figure(2);
+  clf;
+  bar(centers,[fracneg;fracpos]');
+  xlabel('|Prediction|');
+  ylabel('Fraction');
+  legend({'Negative','Positive'});
+
+  for expi = 1:numel(expdirs_train),
+    
+    ctrax_expdir = expdirs_train{expi};
+    scorescurr = allscores{expi};
+    nframestotal = numel(scorescurr);
+%     sd = load(fullfile(ctrax_expdir,jd.file.scorefilename{1}));
+%     nframesperfly = cellfun(@numel,sd.allScores.scores);
+%     nframestotal = sum(nframesperfly);
+%     scorescurr = [sd.allScores.scores{:}];
+    dosample = false(1,nframestotal);
+    dosample(allclass{expi}==1) = true;
+    idxneg = find(allclass{expi}==0);
+    [~,bin] = histc(-scorescurr(idxneg),edges);
+    weight = fracpos(bin)./fracneg(bin);
+    idxsample = datasample(idxneg,nnegpervid,'Replace',false,'Weights',weight/sum(weight));
+    dosample(idxsample) = true;
+    %idxsample = randsample(numel(idxneg),nnegpervid,false);
+    %dosample(idxneg(idxsample)) = true;
+    td = load(fullfile(ctrax_expdir,jd.file.trxfilename));
+    jdfix.labels(expi).off = [td.trx.off];
+    for fly = 1:numel(nframesperfly{expi}),
+      i0 = sum(nframesperfly{expi}(1:fly-1))+1;
+      i1 = sum(nframesperfly{expi}(1:fly));
+      dosamplecurr = dosample(i0:i1);
+      classcurr = allclass{expi}(i0:i1);
+      [t0spos,t1spos] = get_interval_ends(dosamplecurr & classcurr==1);
+      [t0sneg,t1sneg] = get_interval_ends(dosamplecurr & classcurr==0);
+      [impt0s,impt1s] = get_interval_ends(dosamplecurr);
+      names = [repmat(jdfix.behaviors.names(1),[1,numel(t0spos)]),...
+        repmat(jdfix.behaviors.names(2),[1,numel(t0sneg)])];
+      t0s = [t0spos,t0sneg];
+      t1s = [t1spos,t1sneg];
+      [~,order] = sort(t0s);
+      names = names(order);
+      t0s = t0s(order);
+      t1s = t1s(order);
+      jdfix.labels(expi).t0s{fly} = t0s;
+      jdfix.labels(expi).t1s{fly} = t1s;
+      jdfix.labels(expi).names{fly} = names;
+      jdfix.labels(expi).flies(fly) = fly;
+      jdfix.labels(expi).timestamp{fly} = repmat(labeltimestamp,[1,numel(t0s)]);
+      jdfix.labels(expi).timelinetimestamp{fly} = struct(jdfix.behaviors.names{1},labeltimestamp);
+      jdfix.labels(expi).imp_t0s{fly} = impt0s;
+      jdfix.labels(expi).imp_t1s{fly} = impt1s;
+    end
+    
+  end
+  
+  [p,n,ext] = fileparts(jabfile);
+  fixjabfile = fullfile(p,[n,'_pred2labels',ext]);
+  saveAnonymous(fixjabfile,jdfix);
+  
+  [p,n,ext] = fileparts(fixjabfile);
+  trainedfixedjabfile = fullfile(p,[n,'_trained',ext]);
+  input(sprintf('Open %s in JAABA and train classifier. resave as %s: ',fixjabfile,trainedfixedjabfile));
+
+  assert(exist(trainedfixedjabfile,'file')>0);
+  for expi = 1:numel(expdirs_train),
+    ctrax_expdir = expdirs_train{expi};
+    JAABADetect(ctrax_expdir,'jabfiles',{trainedfixedjabfile},'forcecompute',true);
+  end
+  
+  allscoresnew = [];
+  allclassnew = [];
+  for expi = 1:numel(expdirs_train),
+    ctrax_expdir = expdirs_train{expi};
+    
+    sfn = fullfile(ctrax_expdir,jdfix.file.scorefilename{1});
+    sdnew = load(sfn);
+    allscoresnew = [allscoresnew,[sdnew.allScores.scores{:}]/sdnew.allScores.scoreNorm];
+    
+    ispos1 = [];
+    for fly = 1:numel(sdnew.allScores.scores),
+      ispos = false(size(sdnew.allScores.scores{fly}));
+      for i = 1:numel(sdnew.allScores.t0s{fly}),
+        ispos(sdnew.allScores.t0s{fly}(i):sdnew.allScores.t1s{fly}(i)-1) = true;
+      end
+      assert(numel(ispos) == numel(sdnew.allScores.scores{fly}));
+      allclassnew = [allclassnew,ispos];
+    end
+    
+  end
+  
+  clf;
+  scatter(allscoresv,allscoresnew,[],double(allclassnew),'.');
+  axis equal;
+  hold on;
+  plot([-1.5,1.5],[-1.5,1.5],'k-');
+  plot([-1.5,1.5],[0,0],'k-');
+  plot([0,0],[-1.5,1.5],'k-');
+  axis([-1.5,1.5,-1.5,1.5]);
+  xlabel('Old predictions');
+  ylabel('New predictions');
+  cm = [     0    0.4470    0.7410
+    0.8500    0.3250    0.0980];
+  colormap(cm)
+  
+  if exist(gtjabfile,'file'),
+    
+    gtjd = loadAnonymous(gtjabfile);
+    
+    gtexpdirs = cell(1,numel(gtjd.gtExpDirNames));
+    nfalseposnew = zeros(1,numel(gtjd.gtExpDirNames));
+    nfalseposold = zeros(1,numel(gtjd.gtExpDirNames));
+    nfalsenegnew = zeros(1,numel(gtjd.gtExpDirNames));
+    nfalsenegold = zeros(1,numel(gtjd.gtExpDirNames));
+    nposperexp = zeros(1,numel(gtjd.gtExpDirNames));
+    nnegperexp = zeros(1,numel(gtjd.gtExpDirNames));
+    %off = 0;
+    for expi = 1:numel(gtjd.gtExpDirNames),
+      [~,expname] = fileparts(gtjd.gtExpDirNames{expi});
+      expdir = fullfile(gtrootdir,expname);
+      gtexpdirs{expi} = expdir;
+      %JAABADetect(expdir,'jabfiles',{trainedfixedjabfile,jabfile},'forcecompute',false);
+      sdnew = load(fullfile(expdir,jdfix.file.scorefilename{1}));
+      sdold = load(fullfile(expdir,jd.file.scorefilename{1}));
+      
+      for flyi = 1:size(gtjd.gtLabels(expi).flies,1),
+        fly = gtjd.gtLabels(expi).flies(flyi,:);
+        ncurr = numel(sdnew.allScores.scores{fly});
+        isposlabel = nan(1,ncurr);
+        labelidx = strcmp(gtjd.gtLabels(expi).names{flyi},gtjd.behaviors.names{1});
+        for i = 1:numel(gtjd.gtLabels(expi).t0s{flyi}),
+          isposlabel(gtjd.gtLabels(expi).t0s{flyi}(i):gtjd.gtLabels(expi).t1s{flyi}(i)-1) = labelidx(i);
+        end
+        isposprednew = set_interval_ends(sdnew.allScores.t0s{fly},sdnew.allScores.t1s{fly},ncurr);
+        ispospredold = set_interval_ends(sdold.allScores.t0s{fly},sdold.allScores.t1s{fly},ncurr);
+        nfalseposnew(expi) = nfalseposnew(expi) + nnz(~isnan(isposlabel) & isposprednew & isposlabel==0);
+        nfalseposold(expi) = nfalseposold(expi) + nnz(~isnan(isposlabel) & ispospredold & isposlabel==0);
+        nfalsenegnew(expi) = nfalsenegnew(expi) + nnz(~isnan(isposlabel) & ~isposprednew & isposlabel==1);
+        nfalsenegold(expi) = nfalsenegold(expi) + nnz(~isnan(isposlabel) & ~ispospredold & isposlabel==1);
+        nposperexp(expi) = nposperexp(expi) + nnz(isposlabel==1);
+        nnegperexp(expi) = nnegperexp(expi) + nnz(isposlabel==0);
+        ncurr1 = nnz(~isnan(isposlabel));
+%         plot(off+1:off+ncurr1,isposlabel(~isnan(isposlabel)),'k.');
+%         plot(off+1:off+ncurr1,double(ispospredold(~isnan(isposlabel)))+.01,'m.');
+%         plot(off+1:off+ncurr1,double(isposprednew(~isnan(isposlabel)))+.02,'c.');
+%         off = off + ncurr1;
+      end
+      
+    end
+    
+    fprintf('False positive rate: Old: %d / %d = %f, New: %d / %d = %f.\n',...
+      sum(nfalseposold),sum(nnegperexp),sum(nfalseposold)/sum(nnegperexp),...
+      sum(nfalseposnew),sum(nnegperexp),sum(nfalseposnew)/sum(nnegperexp));
+    fprintf('False negative rate: Old: %d / %d = %f, New: %d / %d = %f.\n',...
+      sum(nfalsenegold),sum(nposperexp),sum(nfalseposold)/sum(nposperexp),...
+      sum(nfalsenegnew),sum(nposperexp),sum(nfalseposnew)/sum(nposperexp));
+
+%     False positive rate: Old: 506 / 12014 = 0.042118, New: 487 / 12014 = 0.040536.
+%     False negative rate: Old: 499 / 5123 = 0.098770, New: 471 / 5123 = 0.095061.
+    
+    set(gca,'YLim',[-.1,1.3]);
+    
+  end
+  
+  
+  jabfile = trainedfixedjabfile;
+  jd = loadAnonymous(jabfile);
+  
+end
+
 %% create a new feature type compatible with output of disco pipeline
 
 oldfileinfo = jd.file;
 
 if ~fakectraxnames,
   
-  [featureLexicon,animalType] = featureLexiconFromFeatureLexiconName('flies_disco','JAABA');
-  moviei = 1;
-  expdir = expdirs_train{moviei};
-  [~,expname] = fileparts(expdir);
-  outexpdir = fullfile(rootoutdir,expname);
-  pff = dir(fullfile(outexpdir,dataloc_params.perframedir,'*.mat'));
-  pff = cellfun(@(x) x(1:end-4), {pff.name}, 'UniformOutput',false);
-  lex = fieldnames(featureLexicon.perframe);
-  fprintf('Per-frame features required by flies_disco type that do not exist:\n');
-  disp(setdiff(lex,pff))
-  fprintf('Per-frame features that exist not required by fly_disco type:\n');
-  disp(setdiff(pff,lex)')
-  % biggest -> longest
-  % smallest -> shortest
-  % area_inmost -> length_inmost
-  % area_outmost -> length_outmost
-  % wing_area -> wing_length
-  assert(isempty(setdiff(lex,pff)));
+%   [featureLexicon,animalType] = featureLexiconFromFeatureLexiconName('flies_disco','JAABA');
+%   moviei = 1;
+%   expdir = expdirs_train{moviei};
+%   [~,expname] = fileparts(expdir);
+%   outexpdir = fullfile(rootoutdir,expname);
+%   pff = dir(fullfile(outexpdir,dataloc_params.perframedir,'*.mat'));
+%   pff = cellfun(@(x) x(1:end-4), {pff.name}, 'UniformOutput',false);
+%   lex = fieldnames(featureLexicon.perframe);
+%   fprintf('Per-frame features required by flies_disco type that do not exist:\n');
+%   disp(setdiff(lex,pff))
+%   fprintf('Per-frame features that exist not required by fly_disco type:\n');
+%   disp(setdiff(pff,lex)')
+%   % biggest -> longest
+%   % smallest -> shortest
+%   % area_inmost -> length_inmost
+%   % area_outmost -> length_outmost
+%   % wing_area -> wing_length
+%   assert(isempty(setdiff(lex,pff)));
   
   jddisco = loadAnonymous('/groups/branson/home/bransonk/behavioranalysis/code/FlyDiscoAnalysis/FlyTracker/scripts/demo.jab');
   
-  jd.featureLexiconName = jddisco.featureLexicon;
+  jd.featureLexiconName = jddisco.featureLexiconName;
   jd.file = jddisco.file;
   jd.sublexiconPFNames = jddisco.sublexiconPFNames;
   jd.windowFeaturesParams = jddisco.windowFeaturesParams;
   jd.classifierStuff = jddisco.classifierStuff;
 end
 
-
 %% create a new jab file with the FlyTracker outputs and the reordered labels
 
 newlabels = Labels.labels(numel(expdirs_train));
 mindswap = 10;
 outexpdirs = cell(size(jd.expDirNames));
+behavior = jd.behaviors.names{1};
 for moviei = 1:numel(expdirs_train),
   expdir = expdirs_train{moviei};
   [~,expname] = fileparts(expdir);
