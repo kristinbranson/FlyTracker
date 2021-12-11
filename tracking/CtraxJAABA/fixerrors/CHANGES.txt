@@ -1,0 +1,19 @@
+2209-06-17 Kristin Branson
+
+Fixed bugs in check_suspicious_sequences when trajectory time lines do not overlap sufficiently. 
+
+Changed fixerrorsgui so that the axes are always square and equal. 
+
+2009-06-08 Kristin Branson
+
+VERSION 0.1.04 CREATED.
+
+2009-06-08 Kristin Branson
+
+Updated convert_units_f to be the same as the convert_units_f in behavioralmicroarray. 
+
+2009-06-12 Kristin Branson
+
+fixerrorsgui now chooses the colors of the flies so that nearby flies in the current sequence have different colors. 
+
+fixed a bug in check_suspicious_sequences if flies were not alive during the same subsequence. 
