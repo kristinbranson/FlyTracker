@@ -1803,13 +1803,13 @@ nframesinterp = f2-f1+1;
 xinterp = struct;
 for fni = 1:numel(handles.trajfns),
   fn = handles.trajfns{fni};
-  x1 = handles.trx(fly1).(fn)(i1);
-  x2 = handles.trx(fly1).(fn)(i2);
+  x1 = handles.trx(fly1).(fn)(:,i1);
+  x2 = handles.trx(fly2).(fn)(:,i2);
   if strcmp(fn,'theta'),
     dtheta = modrange(x2-x1,-pi,pi);
-    xinterp.(fn) = modrange(linspace(0,dtheta,nframesinterp)+x1,-pi,pi);
+    xinterp.(fn) = modrange(linspacev(0,dtheta,nframesinterp)+x1,-pi,pi);
   else
-    xinterp.(fn) = linspace(x1,x2,nframesinterp);
+    xinterp.(fn) = linspacev(x1,x2,nframesinterp);
   end
 end
 % x1 = handles.trx(fly1).x(i1);
@@ -1850,7 +1850,7 @@ elseif f3 > handles.trx(fly1).endframe,
   nappend = f3 - handles.trx(fly1).endframe;
   for fni = 1:numel(handles.trajfns),
     fn = handles.trajfns{fni};
-    handles.trx(fly1).(fn)(end+1:end+nappend) = 0;
+    handles.trx(fly1).(fn)(:,end+1:end+nappend) = nan;
   end
 %   handles.trx(fly1).x(end+1:end+nappend) = 0;
 %   handles.trx(fly1).y(end+1:end+nappend) = 0;
@@ -1858,7 +1858,7 @@ elseif f3 > handles.trx(fly1).endframe,
 %   handles.trx(fly1).b(end+1:end+nappend) = 0;
 %   handles.trx(fly1).theta(end+1:end+nappend) = 0;
   if isfield( handles.trx, 'timestamps' )
-     handles.trx(fly1).timestamps(end+1:end+nappend) = 0;
+     handles.trx(fly1).timestamps(end+1:end+nappend) = nan;
   end
   handles.trx(fly1).nframes = handles.trx(fly1).nframes+nappend;
   handles.trx(fly1).endframe = f3;
@@ -1868,7 +1868,7 @@ end
 idx = i1:handles.trx(fly1).off+(f2);
 for fni = 1:numel(handles.trajfns),
   fn = handles.trajfns{fni};
-  handles.trx(fly1).(fn)(idx) = xinterp.(fn);
+  handles.trx(fly1).(fn)(:,idx) = xinterp.(fn);
 end
 % handles.trx(fly1).x(idx) = xinterp;
 % handles.trx(fly1).y(idx) = yinterp;
@@ -1884,7 +1884,7 @@ idx1 = handles.trx(fly1).off+(f2):handles.trx(fly1).off+(f3);
 idx2 = handles.trx(fly2).off+(f2):handles.trx(fly2).off+(f3);
 for fni = 1:numel(handles.trajfns),
   fn = handles.trajfns{fni};
-  handles.trx(fly1).(fn)(idx1) = handles.trx(fly2).(fn)(idx2);
+  handles.trx(fly1).(fn)(:,idx1) = handles.trx(fly2).(fn)(:,idx2);
 end
 % handles.trx(fly1).x(idx1) = handles.trx(fly2).x(idx2);
 % handles.trx(fly1).y(idx1) = handles.trx(fly2).y(idx2);
@@ -2021,7 +2021,8 @@ if f < handles.trx(fly).firstframe,
   n = handles.trx(fly).firstframe - f;
   for fni = 1:numel(handles.trajfns),
     fn = handles.trajfns{fni};
-    handles.trx(fly).(fn) = [zeros(1,n),handles.trx(fly).(fn)];
+    k = size(handles.trajfns{fni},1);
+    handles.trx(fly).(fn) = [nan(k,n),handles.trx(fly).(fn)];
   end
     
 %   handles.trx(fly).x = [zeros(1,n),handles.trx(fly).x];
@@ -2031,7 +2032,7 @@ if f < handles.trx(fly).firstframe,
 %   handles.trx(fly).theta = [zeros(1,n),handles.trx(fly).theta];
   for fni = 1:numel(handles.trajfns),
     fn = handles.trajfns{fni};
-    handles.trx(fly).(fn)(1:n) = handles.trx(fly).(fn)(n+1);
+    handles.trx(fly).(fn)(:,1:n) = repmat(handles.trx(fly).(fn)(:,n+1),[1,n]);
   end
 %   handles.trx(fly).x(1:n) = handles.trx(fly).x(n+1);
 %   handles.trx(fly).y(1:n) = handles.trx(fly).y(n+1);
@@ -2058,7 +2059,8 @@ else
   n = f - handles.trx(fly).endframe; % n frames to add
   for fni = 1:numel(handles.trajfns),
     fn = handles.trajfns{fni};
-    handles.trx(fly).(fn) = [handles.trx(fly).(fn), zeros(1,n)];
+    k = size(handles.trx(fly).(fn),1);
+    handles.trx(fly).(fn) = [handles.trx(fly).(fn), nan(k,n)];
   end
 
 %   handles.trx(fly).x = [handles.trx(fly).x, zeros(1,n)];
@@ -2071,7 +2073,7 @@ else
   end
   for fni = 1:numel(handles.trajfns),
     fn = handles.trajfns{fni};
-    handles.trx(fly).(fn)(end-n+1:end) = handles.trx(fly).(fn)(end-n);
+    handles.trx(fly).(fn)(:,end-n+1:end) = repmat(handles.trx(fly).(fn)(:,end-n),[1,n]);
   end
 %   handles.trx(fly).x(end-n+1:end) = handles.trx(fly).x(end-n);
 %   handles.trx(fly).y(end-n+1:end) = handles.trx(fly).y(end-n);
@@ -2390,6 +2392,11 @@ set(handles.manytrackcancelbutton,'string','Stop');
 set(handles.manytrackdoitbutton,'enable','off');
 handles.stoptracking = false;
 
+endframe0 = nan(1,numel(flies));
+for i = 1:numel(flies),
+  endframe0(i) = handles.trx(fly).endframe;
+end
+
 % track
 seq.flies = flies;
 seq.frames = f0:min(f1,[handles.trx(flies).endframe]);
@@ -2398,6 +2405,19 @@ if get(handles.manytrackshowtrackingbutton,'value')
 end
 handles.stoptracking = false;
 handles = fix_FixTrackFlies(flies,f0,f1,handles);
+trackfns = {'x','y','theta','a','b'}; % fields that get modified by tracking
+extrafns = setdiff(handles.trajfns,trackfns);
+if ~isempty(extrafns),
+  fprintf('Overwriting the following untracked fields with nan:\n');
+  fprintf('%s\n',extrafns{:});
+end
+for i = 1:numel(extrafns),
+  fn = extrafns{i};
+  for j = 1:numel(flies),
+    fly = flies(j);
+    handles.trx(fly).(fn)(:,f0:f1) = nan;
+  end
+end
 for fly = flies(:)',
   handles = fix_FixDeathEvent(handles,fly);
 end
@@ -2627,7 +2647,7 @@ handles.undolist{end+1} = {'superpose', handles.selected, ...
 % superpose
 for fni = 1:numel(handles.trajfns),
   fn = handles.trajfns{fni};
-  handles.trx(fly2).(fn)(idx2) = handles.trx(fly1).(fn)(idx1);
+  handles.trx(fly2).(fn)(:,idx2) = handles.trx(fly1).(fn)(:,idx1);
 end
 % handles.trx(fly2).x(idx2) = handles.trx(fly1).x(idx1);
 % handles.trx(fly2).y(idx2) = handles.trx(fly1).y(idx1);
