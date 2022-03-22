@@ -265,7 +265,7 @@ function run_tracker(videos, options, f_calib, vinfo_or_video_file_name)
       end
       % load video
       do_close = 0;
-      if nargin < 4 || isempty(vinfo)
+      if nargin < 4 || isempty(vinfo_or_video_file_name)
         vinfo = video_open(f_vid);
         do_close = 1;
       end
