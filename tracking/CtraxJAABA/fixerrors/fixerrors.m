@@ -32,7 +32,7 @@ end
 
 helpmsg = sprintf('Choose the mat file containing the trajectories corresponding to movie %s.',[moviepath,moviename]);
 matname = [moviepath,strrep(moviename,movieext,'.mat')];
-[matname,matpath] = uigetfilehelp({'*.mat'},'Choose mat file',matname,'helpmsg',helpmsg);
+[matname,matpath] = uigetfilehelp({'*.mat','*.trk'},'Choose mat/trk file',matname,'helpmsg',helpmsg);
 if isnumeric(matname) && matname == 0, 
    if RUN_UNTRACKED
       matpath = moviepath;
