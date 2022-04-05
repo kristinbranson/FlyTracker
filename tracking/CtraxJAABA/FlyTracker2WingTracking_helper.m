@@ -173,6 +173,9 @@ save(fullfile(perframedir,[cfn,'.mat']),'data','units');
     % interpolate
     if all(ismissing_l),
       l(:) = medianlength;
+    elseif nnz(ismissing_l) == 1,
+      l1 = l(ismissing_l);
+      l(:) = l1;
     elseif any(ismissing_l),
       l(ismissing_l) = interp1(find(~ismissing_l),l(~ismissing_l),find(ismissing_l));
     end
