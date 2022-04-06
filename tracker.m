@@ -146,6 +146,7 @@ function run_tracker(videos, options, f_calib, vinfo_or_video_file_name)
        videos.filter = [filename ext];
        vid_files = {[filename ext]};
    else
+       vinfo = [] ;
        % convert input/output directories to absolute path form
        videos.dir_in  = absolute_path(videos.dir_in);
        videos.dir_out = absolute_path(videos.dir_out);
@@ -264,10 +265,11 @@ function run_tracker(videos, options, f_calib, vinfo_or_video_file_name)
           continue;
       end
       % load video
-      do_close = 0;
-      if nargin < 4 || isempty(vinfo_or_video_file_name)
+      if isempty(vinfo)
         vinfo = video_open(f_vid);
         do_close = 1;
+      else
+        do_close = 0;          
       end
       % get length of video 
       endframe = min(vinfo.n_frames,endframe); 
