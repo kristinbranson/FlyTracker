@@ -87,7 +87,7 @@ options.save_seg    = false;
 options.f_parent_calib = '/groups/branson/home/bransonk/behavioranalysis/code/SSRNN/SSRNN/Data/bowl/calibration20190712.mat';
 options.force_calib = true;
 options.expdir_naming = true;
-options.fr_sample = 200;
+options.fr_samp = 200;
 
 if exist(trkfile,'file'),
   fprintf('Tracking done for %s, skipping.\n',expname);

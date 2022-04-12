@@ -617,6 +617,8 @@ function setResolution(~,~)
     end
     if bg.invert,
       bg_mean = 1 - bg.bg_mean;
+    else
+      bg_mean = bg.bg_mean ;
     end
     haxbg(1) = subplot(1,3,1,'Parent',hfigbg);
     if ndims(bg_mean) == 3,
@@ -1223,7 +1225,10 @@ function acceptChambers(~,~)
     else
         h = handles.roi_h_full;
     end
-    if isempty(h), return; end
+    if isempty(h),
+        errordlg('No chambers exist.  You have to detect/draw them before you click the "continue" button.') ;
+        return
+    end
 
     % generate chamber masks and rois
     masks = cell(1,numel(h));
