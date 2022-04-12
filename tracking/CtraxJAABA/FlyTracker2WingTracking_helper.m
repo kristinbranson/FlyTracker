@@ -12,7 +12,6 @@ else
 end
 outtrx = intrx;
 nflies = numel(intrx.trx);
-assert(nflies == size(ftd.trk.data,1));
 
 if ~exist('newid2oldid','var') || isempty(newid2oldid),
   newid2oldid = 1:nflies;
@@ -20,6 +19,9 @@ end
 if ~exist('annfile','var'),
   annfile = [];
 end
+
+assert(nflies == numel(newid2oldid) && max(newid2oldid) <= numel(ftd.trk.data));
+
 
 [outtrx.trx.arena] = deal(arena);
 
