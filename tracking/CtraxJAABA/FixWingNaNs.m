@@ -16,7 +16,7 @@ elseif n_present_l == 1,
   l1 = l(ispresent_l);
   l(:) = l1;
 elseif n_present_l < n ,
-  l(ismissing_l) = interp1(find(ispresent_l),l(ispresent_l),find(ismissing_l));
+  l(ismissing_l) = interp1(find(ispresent_l), l(ispresent_l), find(ismissing_l), 'linear', 'extrap') ;
 else
   % do nothing
 end
