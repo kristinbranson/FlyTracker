@@ -1,18 +1,22 @@
-% header = ufmf_read_header(filename)
 function header = ufmf_read_header(filename)
+% header = ufmf_read_header(filename)
+% This version is designed to shadow the version in JAABA/filehandling.
+% Only difference is that it uses a file_object instead of a raw fid
+% when opening the file.  The file_object should work just like the fid
+% except that it fclose()s the fid when the file_object goes out of scope.
 
 MAXNMEANSCACHED = 5;
 
 header.filename = filename;
 
 % open the file for reading, binary, little-endian
-fp = fopen( filename, 'rb' , 'ieee-le');
 if ~exist(filename,'file'),
   error('File %s does not exist',filename);
 end
-if fp < 0,
-  error('File %s exists, but could not open it in rb mode',filename);
-end
+fp = file_object(filename, 'rb' , 'ieee-le');
+% if fp < 0,
+%   error('File %s exists, but could not open it in rb mode',filename);
+% end
 header.fid = fp;
 
 % ufmf: 4
@@ -28,6 +32,7 @@ if header.version < 2,
 end
 
 % index location: 8
+header.indexlocloc = ftell(fp);
 header.indexloc = fread(fp,1,'uint64');
 
 % this is somewhat backwards for faster reading
