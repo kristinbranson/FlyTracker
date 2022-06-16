@@ -358,10 +358,7 @@ function run_tracker(videos, options, f_calib, vinfo_or_video_file_name)
           end
           f_res = fullfile(dir_vid, [name chamber_str '-track.mat']);
           f_res_list{i} = f_res;
-          if n_chambers > 1
-              chamber_str = ['c' num2str(i) ' - '];
-          end
-          tracker_job('track_combine', f_res, f_trk_list, f_calib, options, chamber_str);
+          tracker_job('track_combine', f_res, f_trk_list, f_calib, options);
       end
       % combine results from chambers
       if n_chambers > 1
