@@ -1,4 +1,4 @@
-function core_tracker(track_file_name, input_video_file_path, calibration_file_name, background_file_name, options_as_input)
+function core_tracker(track_file_name, input_video_file_path, calibration_file_name, background_file_name, options)
     % Track (and calibrate) videos.
     %
     % To run tracker with interface, use:
@@ -57,36 +57,38 @@ function core_tracker(track_file_name, input_video_file_path, calibration_file_n
     %
     
     % Deal with args
-    if ~exist('options_as_input', 'var') || isempty(options_as_input) ,       
-        options_as_input = DefaultOptions() ; 
+    if ~exist('options', 'var') || isempty(options) ,       
+        options = DefaultOptions() ; 
     end
     
     % Fill in unspecified options
-    normalized_options_as_input = set_defaults(options_as_input, DefaultOptions()) ;
-    options = normalized_options_as_input ;    
+    normalized_options = set_defaults(options, DefaultOptions()) ;
+    
+    % Make a copy of the options, which we will mutate
+    working_options = normalized_options ;    
         
     % make sure we don't try to use more workers than available
     %n_cores = feature('numCores');
     n_cores = get_maximum_core_count() ;  % works on LSF node
-    options.num_cores = min(n_cores,options.num_cores) ;
+    working_options.num_cores = min(n_cores, working_options.num_cores) ;
     % open parallel pool if not already open
-    if options.num_cores > 1
+    if working_options.num_cores > 1
         try
             open_pool = 1;
             if ~isempty(gcp('nocreate'))
                 par = gcp;
                 n_workers = par.NumWorkers;
-                if n_workers == options.num_cores
+                if n_workers == working_options.num_cores
                     open_pool = 0;
                 else
                     delete(gcp);
                 end
             end
             if open_pool
-                parpool(options.num_cores);
+                parpool(working_options.num_cores);
             end
         catch
-            options.num_cores = 1;
+            working_options.num_cores = 1;
             str = 'Could not open parallel pool. Using single thread.';
             disp(str);
         end
@@ -101,19 +103,19 @@ function core_tracker(track_file_name, input_video_file_path, calibration_file_n
     
     % If certain things are defined in options, want those to override values in
     % calibration
-    if isfield(options, 'n_flies') ,
-        calib.n_flies = options.n_flies ;
+    if isfield(working_options, 'n_flies') ,
+        calib.n_flies = working_options.n_flies ;
     end
-    if isfield(options, 'arena_r_mm') ,
-        calib.arena_r_mm = options.arena_r_mm ;
+    if isfield(working_options, 'arena_r_mm') ,
+        calib.arena_r_mm = working_options.arena_r_mm ;
     end
-    if isfield(options, 'n_flies_is_max') ,
-        calib.n_flies_is_max = options.n_flies_is_max ;
+    if isfield(working_options, 'n_flies_is_max') ,
+        calib.n_flies_is_max = working_options.n_flies_is_max ;
     end
     
     % compute maximum number of frames to process
-    max_frames = round(options.max_minutes*calib.FPS*60) ;
-    endframe = options.startframe + max_frames - 1;
+    max_frames = round(working_options.max_minutes*calib.FPS*60) ;
+    endframe = working_options.startframe + max_frames - 1;
     min_chunksize = 100;
     
     % break down the track file name
@@ -146,7 +148,7 @@ function core_tracker(track_file_name, input_video_file_path, calibration_file_n
     
     % get length of video
     endframe = min(frame_count, endframe) ;
-    n_frames = endframe - options.startframe + 1;
+    n_frames = endframe - working_options.startframe + 1;
 %     % compute background and calibration if needed
 %     flag = tracker_job('track_calibrate', ...
 %                        input_video_file_path, ...
@@ -160,12 +162,12 @@ function core_tracker(track_file_name, input_video_file_path, calibration_file_n
 %         error('Calibration failed') ;
 %     end
     % compute number of chunks to process
-    if ~isempty(options.num_chunks)
-        chunk_count = options.num_chunks;
+    if ~isempty(working_options.num_chunks)
+        chunk_count = working_options.num_chunks;
         chunk_size = ceil(n_frames/chunk_count);
-        options.granularity = max(chunk_size,min_chunksize) ;
+        working_options.granularity = max(chunk_size,min_chunksize) ;
     end
-    chunk_count = ceil(n_frames./options.granularity) ;
+    chunk_count = ceil(n_frames./working_options.granularity) ;
     % loop through all chambers
     valid = find(calib.valid_chambers);
     chamber_count = numel(valid);
@@ -175,9 +177,9 @@ function core_tracker(track_file_name, input_video_file_path, calibration_file_n
     start_step_limit_from_chunk_index = struct_with_shape_and_fields([1 chunk_count], {'start', 'step', 'limit'}) ;
     for chunk_index = 1:chunk_count ,
         start_step_limit = struct() ;
-        start_step_limit.start = options.startframe - 1 + (chunk_index-1) .* options.granularity ;
+        start_step_limit.start = working_options.startframe - 1 + (chunk_index-1) .* working_options.granularity ;
         start_step_limit.step  = 1 ;
-        start_step_limit.limit = min(start_step_limit.start + options.granularity, endframe) ;
+        start_step_limit.limit = min(start_step_limit.start + working_options.granularity, endframe) ;
         start_step_limit_from_chunk_index(chunk_index) = start_step_limit ;
     end    
     
@@ -186,14 +188,10 @@ function core_tracker(track_file_name, input_video_file_path, calibration_file_n
     for chunk_index = 1:chunk_count ,
         atomic_track_file_name_from_chamber_index = cell(1, chamber_count) ;
         for chamber_index = 1:chamber_count ,
-            if chamber_count == 1 ,
-                chamber_str = '' ;
-            else
-                chamber_str = ['-c' num2str(chamber_index)] ;
-            end
+            chamber_affix = fif(chamber_count == 1, '', sprintf('-c%d', chamber_index)) ;
             % determine output filename
             atomic_track_file_leaf_name = ...
-                [track_file_base_name chamber_str '-trk' '-' num2str(start_step_limit_from_chunk_index(chunk_index).start,'%010d') '.mat'] ;
+                [track_file_base_name chamber_affix '-trk' '-' num2str(start_step_limit_from_chunk_index(chunk_index).start,'%010d') '.mat'] ;
             atomic_track_file_name = ...
                 fullfile(temp_track_folder_name, atomic_track_file_leaf_name) ;
             atomic_track_file_name_from_chamber_index{chamber_index} = atomic_track_file_name ;
@@ -202,26 +200,28 @@ function core_tracker(track_file_name, input_video_file_path, calibration_file_n
     end
     
     % For each chunk, run the tracker
-    if options.num_cores > 1 ,
-        success = zeros(1,chunk_count) ;
-        parfor chunk_index = 1:chunk_count
+    if working_options.num_cores > 1 ,
+        did_succeed_from_chunk_index = zeros(1,chunk_count) ;
+        parfor chunk_index = 1:chunk_count ,
             % store job parameters
-            flag = tracker_job('track_process', input_video_file_path, background_file_name, calibration_file_name, ...
-                               atomic_track_file_name_from_chamber_index_from_chunk_index(:,chunk_index)', ...
-                               start_step_limit_from_chunk_index(chunk_index));
-            success(chunk_index) = flag;
+            did_succeed = ...
+                tracker_job_process(input_video_file_path, background_file_name, calibration_file_name, ...
+                                    atomic_track_file_name_from_chamber_index_from_chunk_index(:,chunk_index)', ...
+                                    start_step_limit_from_chunk_index(chunk_index)) ;
+            did_succeed_from_chunk_index(chunk_index) = did_succeed;
         end
-        if ~all(success)
+        if ~all(did_succeed_from_chunk_index)
             error('Some chunks failed') ;
         end
     else
-        for chunk_index = 1:chunk_count
+        for chunk_index = 1:chunk_count ,
             % store job parameters
-            flag = tracker_job('track_process', input_video_file_path, background_file_name, calibration_file_name, ...
-                               atomic_track_file_name_from_chamber_index_from_chunk_index(:,chunk_index)', ...
-                               start_step_limit_from_chunk_index(chunk_index));
-            if ~flag , 
-                error('Some chunk failed') ;
+            did_succeed = ...
+                tracker_job_process(input_video_file_path, background_file_name, calibration_file_name, ...
+                                    atomic_track_file_name_from_chamber_index_from_chunk_index(:,chunk_index)', ...
+                                    start_step_limit_from_chunk_index(chunk_index)) ;
+            if ~did_succeed , 
+                error('Error while tracking chunk %d', chunk_index) ;
             end
         end
     end
@@ -233,8 +233,8 @@ function core_tracker(track_file_name, input_video_file_path, calibration_file_n
     % Synthesize file name for each per-chamber track file
     per_chamber_track_file_name_from_chamber_index = cell(1,chamber_count) ;
     for chamber_index=1:chamber_count
-        chamber_str = fif(chamber_count == 1, '', sprintf('-c%d', chamber_index)) ;
-        per_chamber_track_file_name = fullfile(temp_track_folder_name, [track_file_base_name chamber_str '-track.mat']);        
+        chamber_affix = fif(chamber_count == 1, '', sprintf('-c%d', chamber_index)) ;
+        per_chamber_track_file_name = fullfile(temp_track_folder_name, [track_file_base_name chamber_affix '-track.mat']);        
         per_chamber_track_file_name_from_chamber_index{chamber_index} = per_chamber_track_file_name;
     end    
     
@@ -242,12 +242,11 @@ function core_tracker(track_file_name, input_video_file_path, calibration_file_n
     for chamber_index=1:chamber_count
         atomic_track_file_name_from_chunk_index = atomic_track_file_name_from_chamber_index_from_chunk_index(chamber_index,:) ;
         per_chamber_track_file_name = per_chamber_track_file_name_from_chamber_index{chamber_index} ;   
-        other_chamber_str = fif(chamber_count==1, '', sprintf('c%d-', chamber_index)) ;
-        tracker_job('track_combine', per_chamber_track_file_name, atomic_track_file_name_from_chunk_index, calibration_file_name, options, other_chamber_str) ;
+        tracker_job_combine(per_chamber_track_file_name, atomic_track_file_name_from_chunk_index, calibration_file_name, working_options) ;
     end
     
     %
     % Finally, combine trackes from chambers
     %
-    tracker_job('track_consolidate', track_file_name, per_chamber_track_file_name_from_chamber_index, options) ;
+    tracker_job_consolidate(track_file_name, per_chamber_track_file_name_from_chamber_index, working_options) ;
 end

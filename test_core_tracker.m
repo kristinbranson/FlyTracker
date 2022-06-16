@@ -22,7 +22,8 @@ options.save_JAABA  = false ;
 options.save_xls    = false ;
 options.save_seg    = false ;
 options.n_flies_is_max = true;
-options.max_minutes = 1 ;
+options.do_use_display = false; 
+%options.max_minutes = 1 ;
 
 % Run it, with timing
 tic_id = tic() ;

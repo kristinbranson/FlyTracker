@@ -1,4 +1,4 @@
-function flag = tracker_job_combine(f_res, f_trk_list, f_calib, options, chamber_str)
+function flag = tracker_job_combine(f_res, f_trk_list, f_calib, options)
   % Join output of multiple chunks into a single file
   flag = 0;
   if exist(f_res,'file')
@@ -13,9 +13,9 @@ function flag = tracker_job_combine(f_res, f_trk_list, f_calib, options, chamber
   % initialize waitbar
   steps = 0;  
   n_steps = numel(f_trk_list) + 1 + save_seg;
-  display_available = feature('ShowFigureWindows');
-  waitstr = [chamber_str 'Combining tracks'];
-  if display_available
+  do_use_display = feature('ShowFigureWindows') && options.do_use_display ;
+  waitstr = ['Combining tracks'];
+  if do_use_display
      multiWaitbar(waitstr,0,'Color','g','CanCancel','on');
      waitObject = onCleanup(@() multiWaitbar(waitstr,'Close'));
   end      
@@ -71,7 +71,7 @@ function flag = tracker_job_combine(f_res, f_trk_list, f_calib, options, chamber
      f = f + numel(trk_curr.frame_ids);
      % update waitbar
      steps = steps + 1;
-     if display_available   
+     if do_use_display   
         abort = multiWaitbar(waitstr,steps/n_steps);
         if abort, return; end
      end 
@@ -136,7 +136,7 @@ function flag = tracker_job_combine(f_res, f_trk_list, f_calib, options, chamber
   end
   % update waitbar
   steps = steps + 1;
-  if display_available   
+  if do_use_display   
      abort = multiWaitbar(waitstr,steps/n_steps);
      if abort, return; end
   end  
@@ -182,7 +182,7 @@ function flag = tracker_job_combine(f_res, f_trk_list, f_calib, options, chamber
       clear frame_data
       % update waitbar
       steps = steps + 1;
-      if display_available   
+      if do_use_display   
          abort = multiWaitbar(waitstr,steps/n_steps);
          if abort, return; end
       end       
@@ -232,7 +232,7 @@ function flag = tracker_job_combine(f_res, f_trk_list, f_calib, options, chamber
       delete(f_trk_curr);
   end          
   % close waitbar
-  if display_available
+  if do_use_display
     multiWaitbar(waitstr,'Close');
     drawnow
   end  
