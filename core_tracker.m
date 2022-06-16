@@ -1,4 +1,4 @@
-function core_tracker(videos_dir_out, videos_dir_in, videos_filter, options, f_calib)
+function core_tracker(track_file_name, input_video_file_path, calibration_file_name, background_file_name, options_as_input)
     % Track (and calibrate) videos.
     %
     % To run tracker with interface, use:
@@ -39,8 +39,6 @@ function core_tracker(videos_dir_out, videos_dir_in, videos_filter, options, f_c
     %                         compute already exist. (default: false)
     %       force_calib     - Whether to run calibration even if calibration
     %                         mat file already exists. (default: false)
-    %       force_tracking  - Whether to run tracking, even if track files
-    %                         already exist. (default: false)
     %       force_features  - Whether to run feature computation even if
     %                         feature mat file alreay exists. (default: false)
     %       expdir_naming   - Whether to use JAABA-style experiment directory
@@ -58,28 +56,19 @@ function core_tracker(videos_dir_out, videos_dir_in, videos_filter, options, f_c
     %    vinfo              - if specified, ignore videos and use loaded video
     %
     
-    % default options
-    options_def = DefaultOptions();
-    
-    % set display variables
-    display_available = feature('ShowFigureWindows');
-    fs = 72/get(0,'ScreenPixelsPerInch'); % scale fonts to resemble OSX
-    dh = [];  % dialog handle
-    
-    % fill in specified options
-    if ((nargin < 2) || (isempty(options))), options = options_def; end
-    options = set_defaults(options, options_def);
-    if options.force_all,
-        options.force_calib = true;
-        options.force_tracking = true;
-        options.force_features = true;
+    % Deal with args
+    if ~exist('options_as_input', 'var') || isempty(options_as_input) ,       
+        options_as_input = DefaultOptions() ; 
     end
     
-    display_available = display_available && options.isdisplay;
-    
+    % Fill in unspecified options
+    normalized_options_as_input = set_defaults(options_as_input, DefaultOptions()) ;
+    options = normalized_options_as_input ;    
+        
     % make sure we don't try to use more workers than available
-    n_cores = feature('numCores');
-    options.num_cores = min(n_cores,options.num_cores);
+    %n_cores = feature('numCores');
+    n_cores = get_maximum_core_count() ;  % works on LSF node
+    options.num_cores = min(n_cores,options.num_cores) ;
     % open parallel pool if not already open
     if options.num_cores > 1
         try
@@ -103,271 +92,162 @@ function core_tracker(videos_dir_out, videos_dir_in, videos_filter, options, f_c
         end
     end
     
-    % collect video information
-    vinfo = [] ;
-    % convert input/output directories to absolute path form
-    videos_dir_in  = absolute_path(videos_dir_in);
-    videos_dir_out = absolute_path(videos_dir_out);
-    % check video list
-    if ((~isfield(videos,'filter')) || (isempty(videos_filter)))
-        videos_filter = '*';
-    end
-    % scan input directory for video files
-    vid_files = dir(fullfile(videos_dir_in, videos_filter));
-    vid_files([vid_files.isdir]) = [];
-    vid_files = { vid_files.name };
-    
-    % make sure there are videos to process
-    n_vids = numel(vid_files);
-    if options.expdir_naming,
-        assert(n_vids == 1,'expdir_naming = true only allowed when tracking a single video');
-    end
-    if n_vids < 1
-        str = ['No videos to process for: ' fullfile(videos_dir_in, videos_filter)];
-        if display_available
-            customDialog('warn',str,12*fs);
-        else
-            disp(str);
-        end
-        return
-    end
-    
-    % create output directories
-    if (~exist(videos_dir_out,'dir')), mkdir(videos_dir_out); end
-    for n = 1:n_vids
-        dir_vid = get_dir_vid(vid_files{n}, options, videos_dir_out);
-        %       [~, name] = fileparts(vid_files{n});
-        %       dir_vid = fullfile(videos_dir_out, name);
-        if (~exist(dir_vid,'dir')), mkdir(dir_vid); end
-    end
-    
     % load calibration file
-    if nargin < 3 || isempty(f_calib)
-        f_calib = fullfile(videos_dir_in, 'calibration.mat');
+    if ~exist(calibration_file_name,'file')  ,
+        error([calibration_file_name ' not found: run calibrator first or input a valid calibration file.']) ;
     end
-    if exist(f_calib,'file') && ~(options.force_calib && exist(options.f_parent_calib,'file')),
-        D = load(f_calib); parent_calib = D.calib;
-    elseif exist(options.f_parent_calib,'file'),
-        D = load(options.f_parent_calib); parent_calib = D.calib;
-    else
-        str = [f_calib ' not found: run calibrator first or input a valid calibration file.'];
-        if display_available
-            customDialog('warn',str,12*fs);
-        else
-            disp(str);
-        end
-        return
-    end
+    calibration_file_contents = load(calibration_file_name);
+    calib = calibration_file_contents.calib ;
     
     % If certain things are defined in options, want those to override values in
-    % parent calibration
+    % calibration
     if isfield(options, 'n_flies') ,
-        parent_calib.n_flies = options.n_flies ;
+        calib.n_flies = options.n_flies ;
     end
     if isfield(options, 'arena_r_mm') ,
-        parent_calib.arena_r_mm = options.arena_r_mm ;
+        calib.arena_r_mm = options.arena_r_mm ;
     end
-    if isfield(options,'n_flies_is_max'),
-        parent_calib.n_flies_is_max = options.n_flies_is_max;
+    if isfield(options, 'n_flies_is_max') ,
+        calib.n_flies_is_max = options.n_flies_is_max ;
     end
     
     % compute maximum number of frames to process
-    max_frames = round(options.max_minutes*parent_calib.FPS*60);
+    max_frames = round(options.max_minutes*calib.FPS*60) ;
     endframe = options.startframe + max_frames - 1;
     min_chunksize = 100;
     
-    runinfo = struct;
-    runinfo.vid_files = vid_files;
-    runinfo.frs_per_chunk = cell(1,n_vids);
+    % break down the track file name
+    [~, track_file_base_name, ~] = fileparts(track_file_name) ;        
+
+    % Synthesize the temporary track file folder name
+    scratch_folder_path = get_scratch_folder_path() ;
+    temp_track_folder_name = tempname(scratch_folder_path) ;
     
-    % package jobs to be run in sequence
-    for n = 1:n_vids
-        % get input video file
-        [path1,name,ext] = fileparts(vid_files{n});
-        if options.expdir_naming,
-            [~,parent_name] = fileparts(path1);
-            display_name = [parent_name,filesep,name];
-        else
-            display_name = name;
-        end
-        f_vid = fullfile(videos_dir_in, vid_files{n});
-        assert(exist(f_vid,'file')>0);
-        dir_vid = get_dir_vid(vid_files{n});
-        
-        f_params = fullfile(dir_vid,[name,'-params.mat']);
-        save(f_params,'options');
-        
-        % display progress
-        waitstr = ['Processing ' display_name ext ...
-            '   (movie ' num2str(n) '/' num2str(n_vids) ')'];
-        if display_available
-            if isempty(dh) || ~ishandle(dh)
-                dh = customDialog('wait',waitstr,12*fs);
+    % delete any old output file, and the temporary folder, if they exist
+    ensure_file_does_not_exist(track_file_name) ;
+    ensure_file_does_not_exist(temp_track_folder_name) ;
+    
+    % Create the temp output folder, and make sure it gets deleted when done
+    ensure_folder_exists(temp_track_folder_name) ;   
+    cleaner = onCleanup(@()(ensure_file_does_not_exist(temp_track_folder_name))) ;
+    
+%     params_file_name = fullfile(output_folder_name,[input_video_file_base_name,'-params.mat']);
+%     save(params_file_name,'options');
+
+    % display progress
+    
+%     % check whether video has already been tracked
+%     track_file_name = fullfile(output_folder_name, [input_video_file_base_name '-track.mat']) ;
+    
+    % load video to get frame count
+    vinfo = video_open(input_video_file_path) ;
+    frame_count = vinfo.n_frames ;
+    video_close(vinfo) ;
+    
+    % get length of video
+    endframe = min(frame_count, endframe) ;
+    n_frames = endframe - options.startframe + 1;
+%     % compute background and calibration if needed
+%     flag = tracker_job('track_calibrate', ...
+%                        input_video_file_path, ...
+%                        background_file_name, ...
+%                        calibration_file_name, ...
+%                        options, ...
+%                        parent_calib, ... 
+%                        vinfo, ...
+%                        options.force_calib) ;
+%     if ~flag , 
+%         error('Calibration failed') ;
+%     end
+    % compute number of chunks to process
+    if ~isempty(options.num_chunks)
+        chunk_count = options.num_chunks;
+        chunk_size = ceil(n_frames/chunk_count);
+        options.granularity = max(chunk_size,min_chunksize) ;
+    end
+    chunk_count = ceil(n_frames./options.granularity) ;
+    % loop through all chambers
+    valid = find(calib.valid_chambers);
+    chamber_count = numel(valid);
+    % process tracks for all chambers
+
+    % Set the frame range for each chunk
+    start_step_limit_from_chunk_index = struct_with_shape_and_fields([1 chunk_count], {'start', 'step', 'limit'}) ;
+    for chunk_index = 1:chunk_count ,
+        start_step_limit = struct() ;
+        start_step_limit.start = options.startframe - 1 + (chunk_index-1) .* options.granularity ;
+        start_step_limit.step  = 1 ;
+        start_step_limit.limit = min(start_step_limit.start + options.granularity, endframe) ;
+        start_step_limit_from_chunk_index(chunk_index) = start_step_limit ;
+    end    
+    
+    % Determine the temp file name for each (chamber, chunk) pair
+    atomic_track_file_name_from_chamber_index_from_chunk_index = cell(chamber_count, chunk_count) ;
+    for chunk_index = 1:chunk_count ,
+        atomic_track_file_name_from_chamber_index = cell(1, chamber_count) ;
+        for chamber_index = 1:chamber_count ,
+            if chamber_count == 1 ,
+                chamber_str = '' ;
             else
-                child = get(dh,'Children');
-                set(child(1),'string',waitstr);
+                chamber_str = ['-c' num2str(chamber_index)] ;
             end
-        else
-            disp(['*** ' waitstr])
-        end
-        % check whether video has already been tracked
-        f_res_final = fullfile(dir_vid, [name '-track.mat']);
-        if options.force_tracking && exist(f_res_final,'file'),
-            delete(f_res_final) ;
-        end
-        if exist(f_res_final,'file')
-            disp('Movie already tracked')
-            % compute features and learning files if specified
-            tracker_job('track_features',f_vid,f_res_final,f_calib,options,options.force_features);
-            continue;
-        end
-        % load video
-        if isempty(vinfo)
-            vinfo = video_open(f_vid);
-            do_close = 1;
-        else
-            do_close = 0;
-        end
-        % get length of video
-        endframe = min(vinfo.n_frames,endframe);
-        n_frames = endframe - options.startframe + 1;
-        %n_frames = min(vinfo.n_frames,max_frames);
-        % output filenames
-        f_bg  = fullfile(dir_vid, [name '-bg.mat']);
-        if n_vids > 1 && parent_calib.auto_detect
-            % generate new calibration files if multiple videos
-            f_calib = fullfile(dir_vid, [name '-calibration.mat']);
-        end
-        % compute background and calibration if needed
-        flag = tracker_job('track_calibrate', f_vid, f_bg, f_calib, options, parent_calib, vinfo, options.force_calib) ;
-        if check_abort_bang(dh, flag), return; end
-        % load calibration
-        D = load(f_calib); calib = D.calib;
-        % compute number of chunks to process
-        if ~isempty(options.num_chunks)
-            n_chunks = options.num_chunks;
-            chunksize = ceil(n_frames/n_chunks);
-            options.granularity = max(chunksize,min_chunksize);
-        end
-        n_chunks = ceil(n_frames./options.granularity);
-        % loop through all chambers
-        valid = find(calib.valid_chambers);
-        n_chambers = numel(valid);
-        % process tracks for all chambers
-        % set frame range
-        frs = cell(1,n_chunks);
-        f_trks = cell(1,n_chunks);
-        for c=1:n_chunks
-            fr.start = options.startframe-1+(c-1).*options.granularity;
-            fr.step  = 1;
-            fr.limit = min(fr.start + options.granularity, endframe);
-            frs{c} = fr;
-            f_trks{c} = cell(1,n_chambers);
-            for i=1:n_chambers
-                if n_chambers == 1
-                    chamber_str = '';
-                else
-                    chamber_str = ['-c' num2str(i)];
-                end
-                % determine output filename
-                f_trk = fullfile(dir_vid, ...
-                    [name chamber_str '-trk' '-' num2str(frs{c}.start,'%010d') '.mat'] ...
-                    );
-                f_trks{c}{i} = f_trk;
-            end
-        end
-        runinfo.frs_per_chunk{n} = frs;
-        % check whether chamber files already exist
-        f_res = fullfile(dir_vid, [name chamber_str '-track.mat']);
-        if ~exist(f_res,'file')
-            if options.num_cores > 1
-                success = zeros(1,n_chunks);
-                parfor c = 1:n_chunks
-                    % store job parameters
-                    if strcmp(ext,'.ufmf')
-                        % ufmf cannot be processed in parallel with single fid, must create a new one for each chunk
-                        flag = tracker_job('track_process', f_vid, f_bg, f_calib, f_trks{c}, frs{c});
-                    else
-                        flag = tracker_job('track_process', f_vid, f_bg, f_calib, f_trks{c}, frs{c}, vinfo);
-                    end
-                    success(c) = flag;
-                end
-                if check_abort_bang(dh, min(success)), return; end
-            else
-                for c = 1:n_chunks
-                    % store job parameters
-                    flag = tracker_job('track_process', f_vid, f_bg, f_calib, f_trks{c}, frs{c}, vinfo);
-                    if check_abort_bang(dh, flag), return; end
-                end
-            end
-        end
-        % combine results for all chunks (per chamber)
-        f_res_list = cell(1,n_chambers);
-        for i=1:n_chambers
-            if n_chambers == 1
-                chamber_str = '';
-            else
-                chamber_str = ['-c' num2str(i)];
-            end
-            f_trk_list = cell(1,n_chunks);
-            for c=1:n_chunks
-                f_trk_list{c} = f_trks{c}{i};
-            end
-            f_res = fullfile(dir_vid, [name chamber_str '-track.mat']);
-            f_res_list{i} = f_res;
-            if n_chambers > 1
-                chamber_str = ['c' num2str(i) ' - '];
-            end
-            tracker_job('track_combine', f_res, f_trk_list, f_calib, options, chamber_str);
-        end
-        % combine results from chambers
-        if n_chambers > 1
-            tracker_job('track_consolidate', f_res_final, f_res_list, options);
-        end
-        % compute features and learning files if specified
-        tracker_job('track_features', f_vid, f_res_final, f_calib, options, 1);
-        
-        % close video
-        if do_close
-            video_close(vinfo);
-            vinfo = [];
+            % determine output filename
+            atomic_track_file_leaf_name = ...
+                [track_file_base_name chamber_str '-trk' '-' num2str(start_step_limit_from_chunk_index(chunk_index).start,'%010d') '.mat'] ;
+            atomic_track_file_name = ...
+                fullfile(temp_track_folder_name, atomic_track_file_leaf_name) ;
+            atomic_track_file_name_from_chamber_index{chamber_index} = atomic_track_file_name ;
+            atomic_track_file_name_from_chamber_index_from_chunk_index{chamber_index, chunk_index} = atomic_track_file_name ;
         end
     end
     
-    save(f_params,'runinfo','-append');
-    
-    if ~isempty(dh) && ishandle(dh)
-        child = get(dh,'Children');
-        set(child(1),'string','Finished!');
-        pause(2)
-        delete(dh);
-    end
-    
-end
-
-
-
-function do_abort = check_abort_bang(dh, flag)
-    do_abort = 0;
-    if ~flag
-        if ~isempty(dh) && ishandle(dh),
-            child = get(dh,'Children');
-            set(child(1),'string','** canceled by user **');
-            pause(2)
-            delete(dh);
+    % For each chunk, run the tracker
+    if options.num_cores > 1 ,
+        success = zeros(1,chunk_count) ;
+        parfor chunk_index = 1:chunk_count
+            % store job parameters
+            flag = tracker_job('track_process', input_video_file_path, background_file_name, calibration_file_name, ...
+                               atomic_track_file_name_from_chamber_index_from_chunk_index(:,chunk_index)', ...
+                               start_step_limit_from_chunk_index(chunk_index));
+            success(chunk_index) = flag;
         end
-        do_abort = 1;
-    end
-end
-
-    
-    
-function dir_vid = get_dir_vid(vid_file, options, videos_dir_out)
-    if options.expdir_naming,
-        dir_vid = videos_dir_out;
+        if ~all(success)
+            error('Some chunks failed') ;
+        end
     else
-        [~, name1] = fileparts(vid_file);
-        dir_vid = fullfile(videos_dir_out, name1);
+        for chunk_index = 1:chunk_count
+            % store job parameters
+            flag = tracker_job('track_process', input_video_file_path, background_file_name, calibration_file_name, ...
+                               atomic_track_file_name_from_chamber_index_from_chunk_index(:,chunk_index)', ...
+                               start_step_limit_from_chunk_index(chunk_index));
+            if ~flag , 
+                error('Some chunk failed') ;
+            end
+        end
     end
-end
+
+    %
+    % For each chamber, combine results for all chunks
+    %
     
+    % Synthesize file name for each per-chamber track file
+    per_chamber_track_file_name_from_chamber_index = cell(1,chamber_count) ;
+    for chamber_index=1:chamber_count
+        chamber_str = fif(chamber_count == 1, '', sprintf('-c%d', chamber_index)) ;
+        per_chamber_track_file_name = fullfile(temp_track_folder_name, [track_file_base_name chamber_str '-track.mat']);        
+        per_chamber_track_file_name_from_chamber_index{chamber_index} = per_chamber_track_file_name;
+    end    
+    
+    % For each chamber, do the heavy lifting of combining results for all chunks
+    for chamber_index=1:chamber_count
+        atomic_track_file_name_from_chunk_index = atomic_track_file_name_from_chamber_index_from_chunk_index(chamber_index,:) ;
+        per_chamber_track_file_name = per_chamber_track_file_name_from_chamber_index{chamber_index} ;   
+        other_chamber_str = fif(chamber_count==1, '', sprintf('c%d-', chamber_index)) ;
+        tracker_job('track_combine', per_chamber_track_file_name, atomic_track_file_name_from_chunk_index, calibration_file_name, options, other_chamber_str) ;
+    end
+    
+    %
+    % Finally, combine trackes from chambers
+    %
+    tracker_job('track_consolidate', track_file_name, per_chamber_track_file_name_from_chamber_index, options) ;
+end
