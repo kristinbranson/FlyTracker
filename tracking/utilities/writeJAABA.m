@@ -1,5 +1,4 @@
-
-function writeJAABA(trkname,moviename,trk,feat,calib)
+function writeJAABA(trkname,moviename,trk,feat,calib,expdir)
     if nargin < 3
         D = load(trkname); trk = D.trk;
     end
@@ -12,10 +11,12 @@ function writeJAABA(trkname,moviename,trk,feat,calib)
         f_calib = fullfile(parent_dir,'calibration.mat');
         D = load(f_calib); calib = D.calib;
     end
+    if nargin < 6
+        expdir = [trkname(1:end-10) '_JAABA'];
+    end
 
     try
     % create the experiment directory
-    expdir = [trkname(1:end-10) '_JAABA'];
     if ~exist(expdir,'dir'),
       [success1,msg1] = mkdir(expdir);
       if ~success1,

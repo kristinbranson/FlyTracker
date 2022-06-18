@@ -1,6 +1,9 @@
-function core_tracker(output_track_file_name, ...
-                      input_video_file_path, input_calibration_file_name, input_background_file_name, ...
-                      options)
+function core_tracker(...
+        output_track_file_name, output_calibration_file_name, output_background_file_name, output_features_file_name, ...
+        output_xls_file_name, output_jaaba_folder_name, output_options_file_name, ...
+        input_video_file_path, input_calibration_file_name, input_background_file_name, ...
+        input_options)
+    
     % Track (and calibrate) videos.
     %
     % To run tracker with interface, use:
@@ -56,18 +59,29 @@ function core_tracker(output_track_file_name, ...
     %
     %    f_calib            - file containing calibration data (default: [videos_dir_in]/calibration.mat)
     %    vinfo              - if specified, ignore videos and use loaded video
-    %
     
     % Deal with args
-    if ~exist('options', 'var') || isempty(options) ,       
-        options = DefaultOptions() ; 
+    if ~exist('input_options', 'var') || isempty(input_options) ,       
+        input_options = DefaultOptions() ; 
     end
     
     % Fill in unspecified options
-    normalized_options = set_defaults(options, DefaultOptions()) ;
+    normalized_input_options = set_defaults(input_options, DefaultOptions()) ;
     
     % Make a copy of the options, which we will mutate
-    working_options = normalized_options ;    
+    working_options = normalized_input_options ;    
+    
+    % Delete any old output files
+    ensure_file_does_not_exist(output_track_file_name) ;
+    ensure_file_does_not_exist(output_calibration_file_name) ;
+    ensure_file_does_not_exist(output_background_file_name) ;
+    ensure_file_does_not_exist(output_features_file_name) ;
+    if working_options.save_xls ,
+        ensure_file_does_not_exist(output_xls_file_name) ;
+    end
+    if working_options.save_JAABA ,
+        ensure_file_does_not_exist(output_jaaba_folder_name) ;
+    end    
         
     % make sure we don't try to use more workers than available
     %n_cores = feature('numCores');
@@ -100,23 +114,22 @@ function core_tracker(output_track_file_name, ...
     if ~exist(input_calibration_file_name,'file')  ,
         error([input_calibration_file_name ' not found: run calibrator first or input a valid calibration file.']) ;
     end
-    calibration_file_contents = load(input_calibration_file_name);
-    calib = calibration_file_contents.calib ;
+    calibration = load_anonymous(input_calibration_file_name);
     
     % If certain things are defined in options, want those to override values in
     % calibration
     if isfield(working_options, 'n_flies') ,
-        calib.n_flies = working_options.n_flies ;
+        calibration.n_flies = working_options.n_flies ;
     end
     if isfield(working_options, 'arena_r_mm') ,
-        calib.arena_r_mm = working_options.arena_r_mm ;
+        calibration.arena_r_mm = working_options.arena_r_mm ;
     end
     if isfield(working_options, 'n_flies_is_max') ,
-        calib.n_flies_is_max = working_options.n_flies_is_max ;
+        calibration.n_flies_is_max = working_options.n_flies_is_max ;
     end
     
     % compute maximum number of frames to process
-    max_frames = round(working_options.max_minutes*calib.FPS*60) ;
+    max_frames = round(working_options.max_minutes*calibration.FPS*60) ;
     endframe = working_options.startframe + max_frames - 1;
     min_chunksize = 100;
     
@@ -127,17 +140,13 @@ function core_tracker(output_track_file_name, ...
     scratch_folder_path = get_scratch_folder_path() ;
     temp_track_folder_name = tempname(scratch_folder_path) ;
     
-    % delete any old output file, and the temporary folder, if they exist
-    ensure_file_does_not_exist(output_track_file_name) ;
+    % delete any old temporary folder, if it exists
     ensure_file_does_not_exist(temp_track_folder_name) ;
     
     % Create the temp output folder, and make sure it gets deleted when done
     ensure_folder_exists(temp_track_folder_name) ;   
     cleaner = onCleanup(@()(ensure_file_does_not_exist(temp_track_folder_name))) ;
     
-%     params_file_name = fullfile(output_folder_name,[input_video_file_base_name,'-params.mat']);
-%     save(params_file_name,'options');
-
     % display progress
     
 %     % check whether video has already been tracked
@@ -151,18 +160,35 @@ function core_tracker(output_track_file_name, ...
     % get length of video
     endframe = min(frame_count, endframe) ;
     n_frames = endframe - working_options.startframe + 1;
-%     % compute background and calibration if needed
-%     flag = tracker_job('track_calibrate', ...
-%                        input_video_file_path, ...
-%                        background_file_name, ...
-%                        calibration_file_name, ...
-%                        options, ...
-%                        parent_calib, ... 
-%                        vinfo, ...
-%                        options.force_calib) ;
-%     if ~flag , 
-%         error('Calibration failed') ;
-%     end
+    
+    % compute background from video if needed
+    if working_options.force_calib , 
+        did_succeed = core_tracker_fit_background_model(output_background_file_name, ...
+                                                        input_video_file_name, input_calibration_file_name, ...
+                                                        working_options) ;
+        if ~did_succeed ,
+            error('Background fitting failed') ;
+        end
+        working_background_file_name = output_background_file_name ;
+    else
+        working_background_file_name = input_background_file_name ;
+    end
+
+    % compute arena model from background model, if needed
+    %tic_id = tic() ;
+    if working_options.force_calib || calibration.auto_detect ,
+        did_succeed = core_tracker_fit_arena(output_calibration_file_name, ...
+                                             working_background_file_name, input_calibration_file_name) ;       
+        if ~did_succeed ,
+            error('Calibration failed') ;
+        end
+        working_calibration_file_name = output_calibration_file_name ;
+    else
+        working_calibration_file_name = input_calibration_file_name ;        
+    end
+    %elapsed_time = toc(tic_id) ;
+    %fprintf('Elapsed time to refit arena model was %g seconds.\n', elapsed_time) ;
+    
     % compute number of chunks to process
     if ~isempty(working_options.num_chunks)
         chunk_count = working_options.num_chunks;
@@ -171,7 +197,7 @@ function core_tracker(output_track_file_name, ...
     end
     chunk_count = ceil(n_frames./working_options.granularity) ;
     % loop through all chambers
-    valid = find(calib.valid_chambers);
+    valid = find(calibration.valid_chambers);
     chamber_count = numel(valid);
     % process tracks for all chambers
 
@@ -207,7 +233,7 @@ function core_tracker(output_track_file_name, ...
         parfor chunk_index = 1:chunk_count ,
             % store job parameters
             did_succeed = ...
-                tracker_job_process(input_video_file_path, input_background_file_name, input_calibration_file_name, ...
+                tracker_job_process(input_video_file_path, working_background_file_name, working_calibration_file_name, ...
                                     atomic_track_file_name_from_chamber_index_from_chunk_index(:,chunk_index)', ...
                                     start_step_limit_from_chunk_index(chunk_index)) ;
             did_succeed_from_chunk_index(chunk_index) = did_succeed;
@@ -219,7 +245,7 @@ function core_tracker(output_track_file_name, ...
         for chunk_index = 1:chunk_count ,
             % store job parameters
             did_succeed = ...
-                tracker_job_process(input_video_file_path, input_background_file_name, input_calibration_file_name, ...
+                tracker_job_process(input_video_file_path, working_background_file_name, working_calibration_file_name, ...
                                     atomic_track_file_name_from_chamber_index_from_chunk_index(:,chunk_index)', ...
                                     start_step_limit_from_chunk_index(chunk_index)) ;
             if ~did_succeed , 
@@ -244,11 +270,20 @@ function core_tracker(output_track_file_name, ...
     for chamber_index=1:chamber_count
         atomic_track_file_name_from_chunk_index = atomic_track_file_name_from_chamber_index_from_chunk_index(chamber_index,:) ;
         per_chamber_track_file_name = per_chamber_track_file_name_from_chamber_index{chamber_index} ;   
-        tracker_job_combine(per_chamber_track_file_name, atomic_track_file_name_from_chunk_index, input_calibration_file_name, working_options) ;
+        tracker_job_combine(per_chamber_track_file_name, atomic_track_file_name_from_chunk_index, working_calibration_file_name, working_options) ;
     end
     
     %
     % Finally, combine trackes from chambers
     %
     tracker_job_consolidate(output_track_file_name, per_chamber_track_file_name_from_chamber_index, working_options) ;
+    
+    % compute features and learning files if specified
+    core_tracker_compute_features(output_features_file_name, output_xls_file_name, output_jaaba_folder_name, ...
+                                  input_video_file_path, output_track_file_name, working_calibration_file_name, ...
+                                  working_options) ;
+                              
+    % Save the working options
+    options = working_options ;
+    save(output_options_file_name,'options') ;
 end

@@ -1,5 +1,3 @@
-
-
 function writeXls(savename,data,names)    
     warning off
     [~,msg] = xlswrite([savename '.xls'],ones(10));
