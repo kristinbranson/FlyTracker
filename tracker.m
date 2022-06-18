@@ -85,7 +85,7 @@ function tracker(videos, options, f_calib, vinfo_or_video_file_name)
    end
 end
 
-function run_tracker(videos, options, f_calib, vinfo_or_video_file_name)
+function run_tracker(videos, options, calibration_file_name, vinfo_or_video_file_name)
    % default options
    options_def = DefaultOptions();
    
@@ -185,15 +185,15 @@ function run_tracker(videos, options, f_calib, vinfo_or_video_file_name)
    end
    
    % load calibration file
-   if nargin < 3 || isempty(f_calib)
-      f_calib = fullfile(videos.dir_in, 'calibration.mat');
+   if nargin < 3 || isempty(calibration_file_name)
+      calibration_file_name = fullfile(videos.dir_in, 'calibration.mat');
    end
-   if exist(f_calib,'file') && ~(options.force_calib && exist(options.f_parent_calib,'file')),
-     D = load(f_calib); parent_calib = D.calib;
+   if exist(calibration_file_name,'file') && ~(options.force_calib && exist(options.f_parent_calib,'file')),
+     D = load(calibration_file_name); parent_calib = D.calib;
    elseif exist(options.f_parent_calib,'file'),
      D = load(options.f_parent_calib); parent_calib = D.calib;
    else
-     str = [f_calib ' not found: run calibrator first or input a valid calibration file.'];
+     str = [calibration_file_name ' not found: run calibrator first or input a valid calibration file.'];
      if display_available
        customDialog('warn',str,12*fs);
      else
@@ -261,7 +261,7 @@ function run_tracker(videos, options, f_calib, vinfo_or_video_file_name)
       if exist(f_res_final,'file')
           disp('Movie already tracked')
           % compute features and learning files if specified
-          tracker_job('track_features',f_vid,f_res_final,f_calib,options,options.force_features);          
+          tracker_job('track_features',f_vid,f_res_final,calibration_file_name,options,options.force_features);          
           continue;
       end
       % load video
@@ -279,13 +279,13 @@ function run_tracker(videos, options, f_calib, vinfo_or_video_file_name)
       f_bg  = fullfile(dir_vid, [name '-bg.mat']);
       if n_vids > 1 && parent_calib.auto_detect
           % generate new calibration files if multiple videos 
-          f_calib = fullfile(dir_vid, [name '-calibration.mat']);
+          calibration_file_name = fullfile(dir_vid, [name '-calibration.mat']);
       end
       % compute background and calibration if needed
-      flag = tracker_job('track_calibrate', f_vid, f_bg, f_calib, options, parent_calib, vinfo, options.force_calib) ;
+      flag = tracker_job('track_calibrate', f_vid, f_bg, calibration_file_name, options, parent_calib, vinfo, options.force_calib) ;
       if check_abort(flag), return; end
       % load calibration 
-      D = load(f_calib); calib = D.calib;      
+      D = load(calibration_file_name); calib = D.calib;      
       % compute number of chunks to process
       if ~isempty(options.num_chunks)
           n_chunks = options.num_chunks;
@@ -329,9 +329,9 @@ function run_tracker(videos, options, f_calib, vinfo_or_video_file_name)
                  % store job parameters
                  if strcmp(ext,'.ufmf')
                      % ufmf cannot be processed in parallel with single fid, must create a new one for each chunk
-                     flag = tracker_job('track_process', f_vid, f_bg, f_calib, f_trks{c}, frs{c});
+                     flag = tracker_job('track_process', f_vid, f_bg, calibration_file_name, f_trks{c}, frs{c});
                  else
-                     flag = tracker_job('track_process', f_vid, f_bg, f_calib, f_trks{c}, frs{c}, vinfo);
+                     flag = tracker_job('track_process', f_vid, f_bg, calibration_file_name, f_trks{c}, frs{c}, vinfo);
                  end
                  success(c) = flag;
               end
@@ -339,7 +339,7 @@ function run_tracker(videos, options, f_calib, vinfo_or_video_file_name)
           else
               for c = 1:n_chunks
                  % store job parameters
-                 flag = tracker_job('track_process', f_vid, f_bg, f_calib, f_trks{c}, frs{c}, vinfo);
+                 flag = tracker_job('track_process', f_vid, f_bg, calibration_file_name, f_trks{c}, frs{c}, vinfo);
                  if check_abort(flag), return; end
               end
           end      
@@ -358,14 +358,14 @@ function run_tracker(videos, options, f_calib, vinfo_or_video_file_name)
           end
           f_res = fullfile(dir_vid, [name chamber_str '-track.mat']);
           f_res_list{i} = f_res;
-          tracker_job('track_combine', f_res, f_trk_list, f_calib, options);
+          tracker_job('track_combine', f_res, f_trk_list, calibration_file_name, options);
       end
       % combine results from chambers
       if n_chambers > 1
         tracker_job('track_consolidate', f_res_final, f_res_list, options);
       end
       % compute features and learning files if specified
-      tracker_job('track_features', f_vid, f_res_final, f_calib, options, 1);
+      tracker_job('track_features', f_vid, f_res_final, calibration_file_name, options, 1);
       
       % close video
       if do_close

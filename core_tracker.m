@@ -1,4 +1,6 @@
-function core_tracker(track_file_name, input_video_file_path, calibration_file_name, background_file_name, options)
+function core_tracker(output_track_file_name, ...
+                      input_video_file_path, input_calibration_file_name, input_background_file_name, ...
+                      options)
     % Track (and calibrate) videos.
     %
     % To run tracker with interface, use:
@@ -95,10 +97,10 @@ function core_tracker(track_file_name, input_video_file_path, calibration_file_n
     end
     
     % load calibration file
-    if ~exist(calibration_file_name,'file')  ,
-        error([calibration_file_name ' not found: run calibrator first or input a valid calibration file.']) ;
+    if ~exist(input_calibration_file_name,'file')  ,
+        error([input_calibration_file_name ' not found: run calibrator first or input a valid calibration file.']) ;
     end
-    calibration_file_contents = load(calibration_file_name);
+    calibration_file_contents = load(input_calibration_file_name);
     calib = calibration_file_contents.calib ;
     
     % If certain things are defined in options, want those to override values in
@@ -119,14 +121,14 @@ function core_tracker(track_file_name, input_video_file_path, calibration_file_n
     min_chunksize = 100;
     
     % break down the track file name
-    [~, track_file_base_name, ~] = fileparts(track_file_name) ;        
+    [~, track_file_base_name, ~] = fileparts(output_track_file_name) ;        
 
     % Synthesize the temporary track file folder name
     scratch_folder_path = get_scratch_folder_path() ;
     temp_track_folder_name = tempname(scratch_folder_path) ;
     
     % delete any old output file, and the temporary folder, if they exist
-    ensure_file_does_not_exist(track_file_name) ;
+    ensure_file_does_not_exist(output_track_file_name) ;
     ensure_file_does_not_exist(temp_track_folder_name) ;
     
     % Create the temp output folder, and make sure it gets deleted when done
@@ -205,7 +207,7 @@ function core_tracker(track_file_name, input_video_file_path, calibration_file_n
         parfor chunk_index = 1:chunk_count ,
             % store job parameters
             did_succeed = ...
-                tracker_job_process(input_video_file_path, background_file_name, calibration_file_name, ...
+                tracker_job_process(input_video_file_path, input_background_file_name, input_calibration_file_name, ...
                                     atomic_track_file_name_from_chamber_index_from_chunk_index(:,chunk_index)', ...
                                     start_step_limit_from_chunk_index(chunk_index)) ;
             did_succeed_from_chunk_index(chunk_index) = did_succeed;
@@ -217,7 +219,7 @@ function core_tracker(track_file_name, input_video_file_path, calibration_file_n
         for chunk_index = 1:chunk_count ,
             % store job parameters
             did_succeed = ...
-                tracker_job_process(input_video_file_path, background_file_name, calibration_file_name, ...
+                tracker_job_process(input_video_file_path, input_background_file_name, input_calibration_file_name, ...
                                     atomic_track_file_name_from_chamber_index_from_chunk_index(:,chunk_index)', ...
                                     start_step_limit_from_chunk_index(chunk_index)) ;
             if ~did_succeed , 
@@ -242,11 +244,11 @@ function core_tracker(track_file_name, input_video_file_path, calibration_file_n
     for chamber_index=1:chamber_count
         atomic_track_file_name_from_chunk_index = atomic_track_file_name_from_chamber_index_from_chunk_index(chamber_index,:) ;
         per_chamber_track_file_name = per_chamber_track_file_name_from_chamber_index{chamber_index} ;   
-        tracker_job_combine(per_chamber_track_file_name, atomic_track_file_name_from_chunk_index, calibration_file_name, working_options) ;
+        tracker_job_combine(per_chamber_track_file_name, atomic_track_file_name_from_chunk_index, input_calibration_file_name, working_options) ;
     end
     
     %
     % Finally, combine trackes from chambers
     %
-    tracker_job_consolidate(track_file_name, per_chamber_track_file_name_from_chamber_index, working_options) ;
+    tracker_job_consolidate(output_track_file_name, per_chamber_track_file_name_from_chamber_index, working_options) ;
 end

@@ -94,7 +94,7 @@ function [centers, r, w, h] = calib_chamber_detect(bg, n_chambers, shape, r, w, 
             radius_max = round(min(split_rows,split_cols)*.6);
             radius_min = round(radius_max*.6);
             radius_range = radius_min:radius_max;
-            if numel(radius_range) > 50;
+            if numel(radius_range) > 50 ,
                 step = floor((radius_max-radius_min)/50);
                 radius_range = radius_min:step:radius_max;
             end
