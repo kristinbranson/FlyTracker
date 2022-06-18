@@ -22,7 +22,7 @@ options.save_JAABA  = false ;
 options.save_xls    = false ;
 options.save_seg    = false ;
 options.n_flies_is_max = true;
-options.do_use_display = false; 
+options.isdisplay = false;   % i.e. do_use_display
 %options.max_minutes = 1 ;
 
 % Run it, with timing

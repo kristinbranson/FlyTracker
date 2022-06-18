@@ -17,4 +17,3 @@ options_def.force_tracking = false;
 options_def.force_all = false;
 options_def.force_features = false;
 options_def.startframe = 1;
-options_def.do_use_display = true ;

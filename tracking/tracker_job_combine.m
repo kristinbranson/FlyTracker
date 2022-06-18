@@ -13,7 +13,7 @@ function flag = tracker_job_combine(f_res, f_trk_list, f_calib, options)
   % initialize waitbar
   steps = 0;  
   n_steps = numel(f_trk_list) + 1 + save_seg;
-  do_use_display = feature('ShowFigureWindows') && options.do_use_display ;
+  do_use_display = feature('ShowFigureWindows') && options.isdisplay ;
   waitstr = ['Combining tracks'];
   if do_use_display
      multiWaitbar(waitstr,0,'Color','g','CanCancel','on');
