@@ -27,5 +27,5 @@ function simple_noninteractive_flytracker(output_folder_name, input_file_name, c
     
     % Call the tracker.  Calling it with args means it will run noninteractively.
     % (Although currently it still shows graphical progress bars and such.)
-    tracker(videos_struct, options, calibration_file_name) ;
+    run_tracker(videos_struct, options, calibration_file_name) ;
 end
