@@ -18,11 +18,11 @@
 %
 %    centers     - n_chambersx2 matrix containing chamber centers
 %
-function [centers, r, w, h] = calib_chamber_detect(bg, n_chambers, shape, r, w, h)
+function [centers, r, w, h] = calib_chamber_detect(bg, n_chambers, shape, r, w, h, options)
     % initialize waitbar
-    display_available = feature('ShowFigureWindows');
+    do_use_display = options.isdisplay && feature('ShowFigureWindows') ;
     waitstr = 'Detecting chambers';
-    if display_available
+    if do_use_display
         multiWaitbar(waitstr,0,'Color','g','CanCancel','on');
         waitObject = onCleanup(@() multiWaitbar(waitstr,'Close'));
     else
@@ -64,7 +64,7 @@ function [centers, r, w, h] = calib_chamber_detect(bg, n_chambers, shape, r, w, 
         CIRCULAR = strcmp(shape,'circular');
     else
         % histogram gradients of magnitute above the threshold
-        n = hist(mod(dir(edges>0),90),4);
+        n = hist(mod(dir(edges>0),90),4); 
         n = sort(n);
         % check whether chambers are circular or rectangular
         CIRCULAR = n(2) >.2*n(3);
@@ -139,7 +139,7 @@ function [centers, r, w, h] = calib_chamber_detect(bg, n_chambers, shape, r, w, 
             count = count + 1;
             max_responses(count) = max(response(:));
             % update waitbar
-            if display_available 
+            if do_use_display 
                 abort = multiWaitbar(waitstr,count/numel(radius_range));
                 if abort, centers = 0; return; end
             else
@@ -175,7 +175,7 @@ function [centers, r, w, h] = calib_chamber_detect(bg, n_chambers, shape, r, w, 
                 max_responses(i,j) = max(response(:));
                 count = count+1;
                 % update waitbar
-                if display_available 
+                if do_use_display 
                     abort = multiWaitbar(waitstr,count/(numel(width_range)*numel(height_range)));
                     if abort, centers = 0; return; end
                 else
@@ -222,8 +222,7 @@ function [centers, r, w, h] = calib_chamber_detect(bg, n_chambers, shape, r, w, 
         [~,idx] = max(response(pixels)); idx = idx(1);
         [y,x] = ind2sub(size(response),pixels(idx)); center = [y x];    
         % set max distance between two chambers
-        if CIRCULAR, min_dist = 2*r;
-        else min_dist = min(w,h); end
+        min_dist = fif(CIRCULAR, 2*r, min(w,h)) ;
         % ignore responses that overlap with existing chambers
         dist = bwdist(chamber_im);
         if dist(center(1),center(2)) < min_dist
@@ -317,7 +316,7 @@ function [centers, r, w, h] = calib_chamber_detect(bg, n_chambers, shape, r, w, 
         centers = centers(1:count,:);
     end
     % close waitbar
-    if display_available
+    if do_use_display
         multiWaitbar(waitstr,'Close');
         drawnow
     else

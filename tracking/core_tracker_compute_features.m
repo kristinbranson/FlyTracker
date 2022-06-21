@@ -1,4 +1,4 @@
-function core_tracker_compute_features(output_feature_file_name, output_xls_file_name, output_jaaba_folder_name, ...
+function core_tracker_compute_features(output_feature_file_name, output_features_csv_folder_name, output_jaaba_folder_name, ...
                                        input_video_file_name, input_tracking_file_name, input_calibration_file_name, ...
                                        options)
                                    
@@ -10,14 +10,14 @@ function core_tracker_compute_features(output_feature_file_name, output_xls_file
   feat = feat_compute(trk, calibration) ;
   save(output_feature_file_name,'feat') ;
 
-  % save xls files
+  % save csv files
   if options.save_xls
       %output_xls_file_name = [input_tracking_file_name(1:end-10) '-trackfeat'];
       names = [trk.names feat.names] ;
       data = nan(size(trk.data,1),size(trk.data,2),numel(names)) ;
       data(:,:,1:size(trk.data,3)) = trk.data ;
       data(:,:,size(trk.data,3)+(1:size(feat.data,3))) = feat.data ;
-      writeXls(output_xls_file_name, data, names) ;
+      write_csvs(output_features_csv_folder_name, data, names) ;
   end  
   
   % write JAABA folders

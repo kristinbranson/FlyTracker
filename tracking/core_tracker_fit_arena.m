@@ -1,5 +1,6 @@
 function did_succeed = core_tracker_fit_arena(output_calibration_file_name, ...
-                                              working_background_file_name, input_calibration_file_name)
+                                              working_background_file_name, input_calibration_file_name, ...
+                                              options)
     
     did_succeed = 0;
     
@@ -13,7 +14,8 @@ function did_succeed = core_tracker_fit_arena(output_calibration_file_name, ...
     end
     % find new chambers and update structure
     [centers, r, w, h] = calib_chamber_detect(bg, calibration.n_chambers, ...
-                                              shape, calibration.r, calibration.w, calibration.h);
+                                              shape, calibration.r, calibration.w, calibration.h, ...
+                                              options);
     if numel(centers)==1 && ~centers
         return;
     end

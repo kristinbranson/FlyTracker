@@ -17,11 +17,12 @@ default_num_cores = get_maximum_core_count() ;
 options = struct() ;
 options.num_cores   = default_num_cores ;
 options.num_chunks  = default_num_cores*2 ;
-options.save_JAABA  = false ;
-options.save_xls    = false ;
-options.save_seg    = false ;
+options.save_JAABA  = true ;
+options.save_xls    = true ;
+options.save_seg    = true ;
 options.n_flies_is_max = true;
 options.max_minutes = 1 ;
+options.isdisplay = false;   % i.e. do_use_display
 
 % Delete the output folder
 if exist(output_folder_name, 'file') ,

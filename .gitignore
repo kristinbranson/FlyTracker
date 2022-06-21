@@ -5,3 +5,4 @@ yoshi-short-test-video-core-tracker/
 writeXls-test-data.mat
 yoshi-short-test-video-new-core-tracker-read-only/
 yoshi-short-test-video-new-core-tracker/
+*.mat
