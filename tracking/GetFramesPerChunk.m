@@ -16,7 +16,7 @@ function runinfo = GetFramesPerChunk(vinfo,options,f_calib)
    % current machine and the original machine tracking was run on
 
    % default options
-   options_def = DefaultOptions();
+   options_def = tracker_default_options();
 
    % fill in specified options
    if ((nargin < 2) || (isempty(options))), options = options_def; end

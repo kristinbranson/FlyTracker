@@ -18,6 +18,7 @@ output_features_file_name = fullfile(working_folder_name, 'movie_14-PAEL-test-01
 output_csv_folder_name = fullfile(working_folder_name, 'movie_14-PAEL-test-01_cam_1.features.csvs') ;
 output_jaaba_folder_name = fullfile(working_folder_name, 'movie_14-PAEL-test-01_cam_1.features.JAABA') ;
 output_options_file_name = fullfile(working_folder_name, 'movie_14-PAEL-test-01_cam_1.output.options.mat') ;
+output_segmentation_file_name = fullfile(working_folder_name, 'movie_14-PAEL-test-01_cam_1.seg.mat') ;
 
 % Set options
 default_num_cores = get_maximum_core_count() ;
@@ -26,7 +27,7 @@ options.num_cores   = default_num_cores ;
 options.num_chunks  = default_num_cores*2 ;
 options.save_JAABA  = true ;
 options.save_xls    = true ;
-options.save_seg    = false ;
+options.save_seg    = true ;
 options.n_flies_is_max = true;
 options.isdisplay = false;   % i.e. do_use_display
 %options.max_minutes = 1 ;
@@ -36,6 +37,7 @@ tic_id = tic() ;
 core_tracker(...
         output_track_file_name, output_calibration_file_name, output_background_file_name, output_features_file_name, ...
         output_csv_folder_name, output_jaaba_folder_name, output_options_file_name, ...
+        output_segmentation_file_name, ...
         input_video_file_name, input_calibration_file_name, input_background_file_name, ...
         options)
 elapsed_time = toc(tic_id) ;

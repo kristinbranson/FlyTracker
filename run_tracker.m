@@ -1,6 +1,6 @@
 function run_tracker(videos, options, calibration_file_name)
    % default options
-   options_def = DefaultOptions();
+   options_def = tracker_default_options();
    
    % set display variables
    display_available = feature('ShowFigureWindows');   

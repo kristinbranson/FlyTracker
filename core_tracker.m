@@ -1,6 +1,7 @@
 function core_tracker(...
         output_track_file_name, output_calibration_file_name, output_background_file_name, output_features_file_name, ...
         output_features_csv_folder_name, output_jaaba_folder_name, output_options_file_name, ...
+        output_segmentation_file_name, ...
         input_video_file_path, input_calibration_file_name, input_background_file_name, ...
         input_options)
     
@@ -62,11 +63,11 @@ function core_tracker(...
     
     % Deal with args
     if ~exist('input_options', 'var') || isempty(input_options) ,       
-        input_options = DefaultOptions() ; 
+        input_options = tracker_default_options() ; 
     end
     
     % Fill in unspecified options
-    normalized_input_options = set_defaults(input_options, DefaultOptions()) ;
+    normalized_input_options = set_defaults(input_options, tracker_default_options()) ;
     
     % Make a copy of the options, which we will mutate
     working_options = normalized_input_options ;    
@@ -267,17 +268,31 @@ function core_tracker(...
         per_chamber_track_file_name_from_chamber_index{chamber_index} = per_chamber_track_file_name;
     end    
     
+    % Synthesize file name for each per-chamber seg file
+    per_chamber_segmentation_file_name_from_chamber_index = cell(1,chamber_count) ;
+    for chamber_index=1:chamber_count
+        chamber_affix = fif(chamber_count == 1, '', sprintf('-c%d', chamber_index)) ;
+        per_chamber_segmentation_file_name = fullfile(temp_track_folder_name, [track_file_base_name chamber_affix '-seg.mat']);        
+        per_chamber_segmentation_file_name_from_chamber_index{chamber_index} = per_chamber_segmentation_file_name;
+    end    
+    
     % For each chamber, do the heavy lifting of combining results for all chunks
     for chamber_index=1:chamber_count
         atomic_track_file_name_from_chunk_index = atomic_track_file_name_from_chamber_index_from_chunk_index(chamber_index,:) ;
         per_chamber_track_file_name = per_chamber_track_file_name_from_chamber_index{chamber_index} ;   
-        tracker_job_combine(per_chamber_track_file_name, atomic_track_file_name_from_chunk_index, working_calibration_file_name, working_options) ;
+        per_chamber_segmentation_file_name = per_chamber_segmentation_file_name_from_chamber_index{chamber_index} ;
+        core_tracker_job_combine(per_chamber_track_file_name, per_chamber_segmentation_file_name, ...
+                                 atomic_track_file_name_from_chunk_index, working_calibration_file_name, working_options) ;
     end
     
     %
     % Finally, combine trackes from chambers
     %
-    tracker_job_consolidate(output_track_file_name, per_chamber_track_file_name_from_chamber_index, working_options) ;
+    core_tracker_job_consolidate(output_track_file_name, ...
+                                 output_segmentation_file_name, ...
+                                 per_chamber_track_file_name_from_chamber_index, ...
+                                 per_chamber_segmentation_file_name_from_chamber_index, ...
+                                 working_options) ;
     
     % compute features and learning files if specified
     core_tracker_compute_features(output_features_file_name, output_features_csv_folder_name, output_jaaba_folder_name, ...

@@ -1,4 +1,4 @@
-function options_def = DefaultOptions()
+function options_def = tracker_default_options()
 
 % default options
 options_def.granularity = 10000;
@@ -17,3 +17,4 @@ options_def.force_tracking = false;
 options_def.force_all = false;
 options_def.force_features = false;
 options_def.startframe = 1;
+options_def.n_flies_is_max = false ;
