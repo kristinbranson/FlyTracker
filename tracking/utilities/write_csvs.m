@@ -1,6 +1,6 @@
 function write_csvs(output_csv_folder_name, data, names)    
     % Write features to a folder full of csv files, one file per fly.
-    ensure_file_does_not_exist(output_csv_folder_name) ;
+    ensure_folder_does_not_exist(output_csv_folder_name) ;
     ensure_folder_exists(output_csv_folder_name) ;
     n_flies = size(data,1) ;
     n_frames = size(data,2) ;

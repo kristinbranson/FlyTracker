@@ -75,10 +75,10 @@ function core_tracker(...
     ensure_file_does_not_exist(output_background_file_name) ;
     ensure_file_does_not_exist(output_features_file_name) ;
     if working_options.save_xls ,
-        ensure_file_does_not_exist(output_features_csv_folder_name) ;
+        ensure_folder_does_not_exist(output_features_csv_folder_name) ;
     end
     if working_options.save_JAABA ,
-        ensure_file_does_not_exist(output_jaaba_folder_name) ;
+        ensure_folder_does_not_exist(output_jaaba_folder_name) ;
     end    
         
     % make sure we don't try to use more workers than available
@@ -119,7 +119,7 @@ function core_tracker(...
     
     % Create the temp output folder, and make sure it gets deleted when done
     ensure_folder_exists(temp_track_folder_name) ;   
-    cleaner = onCleanup(@()(ensure_file_does_not_exist(temp_track_folder_name))) ;
+    cleaner = onCleanup(@()(ensure_folder_does_not_exist(temp_track_folder_name))) ;
     
     % display progress
     

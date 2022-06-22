@@ -22,7 +22,7 @@ function writeXls(output_file_or_folder_name, data, names)
         end
     else    
         csv_folder_name = strcat(output_file_or_folder_name, '.csv') ;
-        ensure_file_does_not_exist(csv_folder_name) ;
+        ensure_folder_does_not_exist(csv_folder_name) ;
         ensure_folder_exists(csv_folder_name) ;
         % write to folder of .csv files
         for i=1:n_flies

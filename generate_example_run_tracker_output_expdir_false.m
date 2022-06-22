@@ -26,7 +26,7 @@ options.isdisplay = false;   % i.e. do_use_display
 options.expdir_naming = false;
 
 % Delete the output folder
-ensure_file_does_not_exist(output_folder_name)
+ensure_folder_does_not_exist(output_folder_name)
 
 % Package up the info about input/output videos into the funny structure that
 % tracker() wants.
