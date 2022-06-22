@@ -27,7 +27,7 @@
 %          bg_var        - per pixel variance estimate 
 %       blob_sum         - sum of blobs detected at each pixel
 %
-function bg = calib_bg_estimate(vinfo, PPM, frame_range)
+function bg = calib_bg_estimate(vinfo, PPM, frame_range, options)
    % set default pixels per millimeters if not provided
    if nargin < 2 || isempty(PPM)
        PPM = 20; % if this value is too small then blobs might not cover
@@ -42,9 +42,9 @@ function bg = calib_bg_estimate(vinfo, PPM, frame_range)
    end   
    frames = (frame_range.start):(frame_range.step):(frame_range.limit-1);
    % initialize waitbar
-   display_available = feature('ShowFigureWindows');
+   do_use_display = options.isdisplay && feature('ShowFigureWindows') ;
    waitstr = 'Computing background image';
-   if display_available
+   if do_use_display
         multiWaitbar(waitstr,0,'Color','g','CanCancel','on');
         waitObject = onCleanup(@() multiWaitbar(waitstr,'Close'));
    else
@@ -71,7 +71,7 @@ function bg = calib_bg_estimate(vinfo, PPM, frame_range)
        if (vinfo.sz == 3), im = rgb2gray(im); end
        imgs(:,:,f) = im;
        % update waitbar
-       if display_available 
+       if do_use_display 
          abort = multiWaitbar(waitstr,f/(numel(frames)+n_sample));
          if abort, bg = 0; return; end
        else
@@ -157,7 +157,7 @@ function bg = calib_bg_estimate(vinfo, PPM, frame_range)
           end
       end
       % update waitbar
-      if display_available 
+      if do_use_display 
          abort = multiWaitbar(waitstr,(f+n_sample)/(numel(frames)+n_sample));
          if abort, bg = 0; return; end
       else
@@ -176,7 +176,7 @@ function bg = calib_bg_estimate(vinfo, PPM, frame_range)
    bg.blob_sum = blob_sum;     
    bg.invert = params.invert;
    % close waitbar
-   if display_available
+   if do_use_display
        multiWaitbar(waitstr,1); pause(.5);
        multiWaitbar(waitstr,'Close');
        drawnow

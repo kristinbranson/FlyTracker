@@ -66,12 +66,9 @@ function core_tracker(...
         input_options = tracker_default_options() ; 
     end
     
-    % Fill in unspecified options
-    normalized_input_options = set_defaults(input_options, tracker_default_options()) ;
-    
-    % Make a copy of the options, which we will mutate
-    working_options = normalized_input_options ;    
-    
+    % Fill in unspecified options, delete unused fields
+    working_options = set_defaults(input_options, tracker_default_options()) ;
+        
     % Delete any old output files
     ensure_file_does_not_exist(output_track_file_name) ;
     ensure_file_does_not_exist(output_calibration_file_name) ;
@@ -85,31 +82,7 @@ function core_tracker(...
     end    
         
     % make sure we don't try to use more workers than available
-    %n_cores = feature('numCores');
-    n_cores = get_maximum_core_count() ;  % works on LSF node
-    working_options.num_cores = min(n_cores, working_options.num_cores) ;
-    % open parallel pool if not already open
-    if working_options.num_cores > 1
-        try
-            open_pool = 1;
-            if ~isempty(gcp('nocreate'))
-                par = gcp;
-                n_workers = par.NumWorkers;
-                if n_workers == working_options.num_cores
-                    open_pool = 0;
-                else
-                    delete(gcp);
-                end
-            end
-            if open_pool
-                parpool(working_options.num_cores);
-            end
-        catch
-            working_options.num_cores = 1;
-            str = 'Could not open parallel pool. Using single thread.';
-            disp(str);
-        end
-    end
+    set_up_parpool_for_flytracker(working_options) ;
     
     % load calibration file
     if ~exist(input_calibration_file_name,'file')  ,
@@ -163,9 +136,9 @@ function core_tracker(...
     n_frames = endframe - working_options.startframe + 1;
     
     % compute background from video if needed
-    if working_options.force_calib , 
+    if isempty(input_background_file_name) || working_options.force_calib , 
         did_succeed = core_tracker_fit_background_model(output_background_file_name, ...
-                                                        input_video_file_name, input_calibration_file_name, ...
+                                                        input_video_file_path, input_calibration_file_name, ...
                                                         working_options) ;
         if ~did_succeed ,
             error('Background fitting failed') ;

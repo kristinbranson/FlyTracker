@@ -16,11 +16,13 @@ function did_succeed = core_tracker_fit_background_model(output_background_file_
     fr.step = max(1,floor((frame_count)./sample_frame_count)) ;
     fr.limit = frame_count ;
     % compute background model
-    bg = calib_bg_estimate(vinfo, input_calibration_file_name.PPM, fr);
+    input_calibration = load_anonymous(input_calibration_file_name) ;
+    bg = calib_bg_estimate(vinfo, input_calibration.PPM, fr, options);
     if isnumeric(bg) && ~bg ,
         return
     end
     % save background model
-    save(output_background_file_name,'bg');
+    ensure_parent_folder_exists(output_background_file_name) ;
+    save(output_background_file_name, 'bg') ;
     did_succeed = 1;
 end

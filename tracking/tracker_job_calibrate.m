@@ -60,7 +60,7 @@ function flag = tracker_job_calibrate(f_vid, f_bg, f_calib, options, parent_cali
       end
       % find new chambers and update structure
       [centers, r, w, h] = calib_chamber_detect(bg, calib.n_chambers, ...
-        shape, calib.r, calib.w, calib.h);
+        shape, calib.r, calib.w, calib.h, options);
       if numel(centers)==1 && ~centers
         return;
       end
