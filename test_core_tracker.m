@@ -1,6 +1,6 @@
 script_folder_name = fileparts(mfilename('fullpath')) ;
-read_only_input_folder_name = fullfile(script_folder_name, 'yoshi-short-test-video-new-core-tracker-read-only') ;
-working_folder_name = fullfile(script_folder_name, 'yoshi-short-test-video-new-core-tracker') ;
+read_only_input_folder_name = fullfile(script_folder_name, 'yoshi-short-test-video-core-tracker-read-only') ;
+working_folder_name = fullfile(script_folder_name, 'yoshi-short-test-video-core-tracker') ;
 
 % Delete the input folder, re-copy from read-only version
 if exist(working_folder_name, 'file') ,
@@ -31,6 +31,8 @@ options.save_seg    = true ;
 options.n_flies_is_max = true;
 options.isdisplay = false;   % i.e. do_use_display
 %options.max_minutes = 1 ;
+options.force_bg_calib = true ;
+options.force_arena_calib = true ;
 
 % Run it, with timing
 tic_id = tic() ;

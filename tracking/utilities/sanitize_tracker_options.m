@@ -1,11 +1,11 @@
-%% Help functions
-% Set default values for parameter fields not specified by the user.
-%
-%    params = set_defaults(params, params_def)
-%
-% copies any fields specified in params_def but not params into params.  If
-% params is empty, then params is set to params_def.
-function options = set_defaults(options, default_options)
+function options = sanitize_tracker_options(options)
+    % Set default values for parameter fields not specified by the user.
+    %
+    %    params = sanitize_options(params, params_def)
+    %
+    % copies any fields specified in params_def but not params into params.  If
+    % params is empty, then params is set to params_def.
+    default_options = tracker_default_options() ;
     if isempty(options) ,
         % return default parameters
         options = default_options ;
@@ -24,12 +24,11 @@ function options = set_defaults(options, default_options)
             warning('FlyTracker:extraOption', 'Ignoring unused field "%s" from options', name) ;
             options = rmfield(options, name) ;                        
         end
-    end
+    end    
     
-    % Bring certain parameters into register
-    if options.force_all,
-        options.force_calib = true;
-        options.force_tracking = true;
-        options.force_features = true;
-    end   
+    % Make sure forced calibration options are consistent
+    if options.force_calib ,
+        options.force_bg_calib = true ;
+        options.force_arena_calib = true ;
+    end
 end

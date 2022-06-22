@@ -63,11 +63,11 @@ function core_tracker(...
     
     % Deal with args
     if ~exist('input_options', 'var') || isempty(input_options) ,       
-        input_options = tracker_default_options() ; 
+        input_options = [] ; 
     end
     
     % Fill in unspecified options, delete unused fields
-    working_options = set_defaults(input_options, tracker_default_options()) ;
+    working_options = sanitize_tracker_options(input_options) ;
         
     % Delete any old output files
     ensure_file_does_not_exist(output_track_file_name) ;
@@ -136,7 +136,7 @@ function core_tracker(...
     n_frames = endframe - working_options.startframe + 1;
     
     % compute background from video if needed
-    if isempty(input_background_file_name) || working_options.force_calib , 
+    if isempty(input_background_file_name) || working_options.force_bg_calib , 
         did_succeed = core_tracker_fit_background_model(output_background_file_name, ...
                                                         input_video_file_path, input_calibration_file_name, ...
                                                         working_options) ;
@@ -150,7 +150,7 @@ function core_tracker(...
 
     % compute arena model from background model, if needed
     %tic_id = tic() ;
-    if working_options.force_calib || calibration.auto_detect ,
+    if working_options.force_arena_calib || calibration.auto_detect ,
         did_succeed = core_tracker_fit_arena(output_calibration_file_name, ...
                                              working_background_file_name, input_calibration_file_name, ...
                                              working_options) ;       

@@ -1,10 +1,9 @@
 function run_tracker(videos_struct, options, input_calibration_file_name)
     % Deal with options argument
-    default_options = tracker_default_options();
     if nargin < 2 || isempty(options) ,
-        options = default_options;
+        options = [] ;
     end
-    options = set_defaults(options, default_options); 
+    options = sanitize_tracker_options(options); 
 
     % Set display variables
     is_display_available = feature('ShowFigureWindows');
