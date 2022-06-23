@@ -1,104 +1,187 @@
-function core_tracker(...
-        output_track_file_name, output_calibration_file_name, output_background_file_name, output_features_file_name, ...
-        output_features_csv_folder_name, output_jaaba_folder_name, output_options_file_name, ...
-        output_segmentation_file_name, ...
-        input_video_file_path, input_calibration_file_name, input_background_file_name, ...
-        input_options)
+function core_tracker(output_track_file_name, ...
+                      output_calibration_file_name, ...
+                      output_background_file_name, ...
+                      output_features_file_name, ...
+                      output_features_csv_folder_name, ...
+                      output_jaaba_folder_name, ...
+                      output_options_file_name, ...
+                      output_segmentation_file_name, ...
+                      input_video_file_name, ...
+                      input_calibration_file_name, ...
+                      input_background_file_name, ...
+                      options)
     
-    % Track (and calibrate) videos.
+    % Track (and calibrate) videos in a 'batch' style, without a graphical
+    % interface.
     %
-    % To run tracker with interface, use:
+    % core_tracker(output_track_file_name, ...
+    %              output_calibration_file_name, ...
+    %              output_background_file_name, ...
+    %              output_features_file_name, ...
+    %              output_features_csv_folder_name, ...
+    %              output_jaaba_folder_name, ...
+    %              output_options_file_name, ...
+    %              output_segmentation_file_name, ...
+    %              input_video_file_path, ...
+    %              input_calibration_file_name, ...
+    %              input_background_file_name, ...
+    %              options)
     %
-    %   tracker
+    % output_track_file_name indicates where the tracks themselves will be saved,
+    % as a Matlab .mat file.  Any pre-existing file will be overwritten.
     %
-    % To run tracker without interface, use:
+    % output_calibration_file_name indicates where the output calibration
+    % information will be saved, as a Matlab .mat file.  Any pre-existing file will
+    % be overwritten.  Note that this file is only output if 1)
+    % options.force_arena_calib is true, or 2) options.force_calib is true, or 3)
+    % the input_calibration_file_name indicates that the arena calibration should be
+    % performed for each video (auto_detect==true).  If none of these conditions
+    % hold, output_calibration_file_name can be empty.
     %
-    %   tracker(videos, [options], [f_calib], [vinfo])
+    % output_background_file_name indicates where the output background model
+    % will be saved, as a Matlab .mat file.  Any pre-existing file will
+    % be overwritten.  Note that this file is only output if 1) the 
+    % input_background_file_name argument is empty, or 2) options.force_bg_calib is
+    % true, or 3) options.force_calib is true.  If none of these conditions hold, 
+    % output_background_file_name can be empty.
     %
-    %  where [] denotes an optional parameter (default values used if set to []) and:
+    % output_features_file_name indicates where the track per-frame features will be saved,
+    % as a Matlab .mat file.  Any pre-existing file will be overwritten.
     %
-    %    videos.            - videos to process through tracking pipeline
-    %       dir_in          - directory containing input videos
-    %       dir_out         - directory in which to save results
-    %       filter          - file filter (eg '*.avi') (default: '*')
+    % output_features_csv_folder_name indicates where the track per-frame features
+    % will be saved, as folder of .csv files, one per fly.  Any pre-existing folder
+    % tree at this location will will be deleted.  This folder will only be written
+    % (and any pre-existing folder tree only deleted) if options.save_xls is true.
+    % Otherwise output_features_csv_folder_name can be empty.  (Yes,
+    % options.save_csvs would probably be a better name at this point.)
     %
-    %    options.           - cluster processing and output options
+    % output_jaaba_folder_name indicates where the track per-frame features will be
+    % saved, as a folder in the format JAABA expects.  Any pre-existing folder tree
+    % at this location will will be deleted.  This folder will only be written (and
+    % any pre-existing folder tree only deleted) if options.save_JAABA is true.
+    % Otherwise output_jaaba_folder_name can be empty.
+    %
+    % output_options_file_name indicates where the "working options" will be saved,
+    % as a Matlab .mat file.  The "working options" are a sanitized version of the
+    % options provided by the options argument (see below).  Any pre-existing file
+    % at this location will be overwritten.
+    %
+    % output_segmentation_file_name indicates where the segmentation will be saved,
+    % as Matlab .mat file.  Any pre-existing file at this location will will be
+    % overwritten.  This file will only be written if options.save_seg is true.
+    % Otherwise output_segmentation_file_name can be empty.
+    %
+    % input_video_file_name is the name of the video to be tracked.  Currently .avi
+    % and .ufmf files are supported.  This input is required.
+    %
+    % input_calibration_file_name is the name of the calibration file (a .mat file)
+    % to be used for tracking.  This input is required.  Note that under certain
+    % conditions (see above, under output_calibration_file_name) the arena
+    % calibration will be re-done using input_video_file_name, and that arena
+    % calibration will be used for tracking.
+    %
+    % input_background_file_name is the name of the file providing the background
+    % model (as a .mat file) to be used for tracking.  Note that under certain
+    % conditions (see above, under output_background_file_name), the background
+    % model will be calculated from input_video_file_name, and that background model
+    % will be used during tracking. One such condition is if
+    % input_background_file_name is empty.
+    % 
+    % options is a scalar struct specifying various options for the tracker.  Allowed 
+    % fields are:
+    %
     %       max_minutes     - maximum number of minutes to process (default: inf)
-    %       num_cores       - number of workers to process jobs in parallel? (default: 1)
+    %       num_cores       - number of workers to process jobs in parallel (default: 1)
     %       granularity     - number of video frames per job (default: 10,000)
     %       num_chunks      - number of chunks to process (default: num_frames/granularity)
-    %       save_JAABA      - write JAABA folders from features? (default: false)
-    %       save_xls        - save tracks and feats to xls? (default: false)
-    %       save_seg        - save segmentation from tracking process? (default: false)
-    %       f_parent_calib  - path to parent calibration file -- defines
-    %                         parameters that are usually preserved within
-    %                         videos of the same rig based on a calibration
-    %                         file from a different video. If not
-    %                         defined/empty, all parameters are estimated from
-    %                         this video.
+    %       save_JAABA      - write JAABA folders from features (default: false)
+    %       save_xls        - save tracks and features to a folder of .csv files (default: false)
+    %       save_seg        - save segmentation from tracking process (default: false)
     %       fr_samp         - Number of frames to sample when computing
     %                         background model. (default: 100)
-    %       isdisplay       - Whether display is available for waitbars etc.
+    %       isdisplay       - Whether graphical display should be used for waitbars
+    %                         etc.  If false, progress is shown on standard output.
+    %                         (default: true)
     %       startframe      - Frame to start tracking on. Default = 1
-    %       force_all       - Whether to force all computations, regardless of
-    %                         whether the files these computations would
-    %                         compute already exist. (default: false)
-    %       force_calib     - Whether to run calibration even if calibration
-    %                         mat file already exists. (default: false)
-    %       force_features  - Whether to run feature computation even if
-    %                         feature mat file alreay exists. (default: false)
-    %       expdir_naming   - Whether to use JAABA-style experiment directory
-    %                         naming scheme for files. (default: false)
-    %       arena_r_mm      - Radius of the arena in mm. This will be used to
-    %                         set the resolution (PPM, pixels per millimeter)
-    %                         if a circular arena is automatically detected.
-    %       n_flies         - Number of flies. Only used when run in
-    %                         non-interactive mode to override parent
-    %                         calibration. (default: not defined)
+    %       force_bg_calib  - If true, background calibration is done using the video 
+    %                         indicated by input_video_file_name, and any background
+    %                         model specified in input_background_file_name is
+    %                         ignored. (default: false)
+    %       force_arena_calib  - If true, arena calibration is done using the video 
+    %                            indicated by input_video_file_name, and any arena
+    %                            model specified in input_calibration_file_name is
+    %                            not used for tracking. (default: false)
+    %       force_calib     - If true, both force_bg_calib and force_arena_calib are taken to 
+    %                         be true, regardless of their actual values, and both
+    %                         background calibration and arena calibration are done
+    %                         using the video indicated by input_video_file_name.
+    %                         (default: false)
+    %       arena_r_mm      - Radius of the arena in mm. If non-empty, this will be used to
+    %                         set the resolution (PPM, pixels per millimeter) if a
+    %                         circular arena is automatically detected, overriding
+    %                         any value provided in input_calibration_file_name.
+    %                         (default: [])
+    %       n_flies         - Number of flies.  If non-empty, overrides number of flies given 
+    %                         in input_calibration_file_name.  (default: [])
     %       n_flies_is_max  - Whether n_flies is an upper limit on the number
     %                         of flies or an actual count. (default: false)
-    %
-    %    f_calib            - file containing calibration data (default: [videos_dir_in]/calibration.mat)
-    %    vinfo              - if specified, ignore videos and use loaded video
+    %       expdir_naming   - Not used by core_tracker().  Present only to keep
+    %                         options structure consistent with those of tracker().
+    % 
+    % If any of these fields are missing from options, the default value is used. If
+    % options contains extra fields not specified here, a warning is issued and they
+    % are ignored.
     
     % Deal with args
-    if ~exist('input_options', 'var') || isempty(input_options) ,       
-        input_options = [] ; 
+    if ~exist('options', 'var') || isempty(options) ,       
+        options = [] ; 
     end
     
     % Fill in unspecified options, delete unused fields
-    working_options = sanitize_tracker_options(input_options) ;
+    working_options = sanitize_tracker_options(options) ;
         
+    % Convert all the input file/folder names to absolute paths
+    output_track_file_path = absolute_filename(output_track_file_name) ;
+    output_calibration_file_path = absolute_filename(output_calibration_file_name) ;
+    output_background_file_path = absolute_filename(output_background_file_name) ;
+    output_features_file_path = absolute_filename(output_features_file_name) ;
+    output_features_csv_folder_path = absolute_filename(output_features_csv_folder_name) ;
+    output_jaaba_folder_path = absolute_filename(output_jaaba_folder_name) ;
+    output_options_file_path = absolute_filename(output_options_file_name) ;
+    output_segmentation_file_path = absolute_filename(output_segmentation_file_name) ;
+    input_video_file_path = absolute_filename(input_video_file_name) ;
+    input_calibration_file_path = absolute_filename(input_calibration_file_name) ;
+    input_background_file_path = absolute_filename(input_background_file_name) ;    
+    
     % Delete any old output files
-    ensure_file_does_not_exist(output_track_file_name) ;
-    ensure_file_does_not_exist(output_calibration_file_name) ;
-    ensure_file_does_not_exist(output_background_file_name) ;
-    ensure_file_does_not_exist(output_features_file_name) ;
+    ensure_file_does_not_exist(output_track_file_path) ;
+    ensure_file_does_not_exist(output_background_file_path) ;
+    ensure_file_does_not_exist(output_features_file_path) ;
     if working_options.save_xls ,
-        ensure_folder_does_not_exist(output_features_csv_folder_name) ;
+        ensure_folder_does_not_exist(output_features_csv_folder_path) ;
     end
     if working_options.save_JAABA ,
-        ensure_folder_does_not_exist(output_jaaba_folder_name) ;
+        ensure_folder_does_not_exist(output_jaaba_folder_path) ;
     end    
         
     % make sure we don't try to use more workers than available
     set_up_parpool_for_flytracker(working_options) ;
     
     % load calibration file
-    if ~exist(input_calibration_file_name,'file')  ,
-        error([input_calibration_file_name ' not found: run calibrator first or input a valid calibration file.']) ;
+    if ~exist(input_calibration_file_path,'file')  ,
+        error([input_calibration_file_path ' not found: run calibrator first or input a valid calibration file.']) ;
     end
-    calibration = load_anonymous(input_calibration_file_name);
+    calibration = load_anonymous(input_calibration_file_path);
     
     % If certain things are defined in options, want those to override values in
     % calibration
-    if isfield(working_options, 'n_flies') ,
+    if isfield(working_options, 'n_flies') && ~isempty(working_options.n_flies) ,
         calibration.n_flies = working_options.n_flies ;
     end
-    if isfield(working_options, 'arena_r_mm') ,
+    if isfield(working_options, 'arena_r_mm') && ~isempty(working_options.arena_r_mm) ,
         calibration.arena_r_mm = working_options.arena_r_mm ;
     end
-    if isfield(working_options, 'n_flies_is_max') ,
+    if isfield(working_options, 'n_flies_is_max') && ~isempty(working_options.n_flies_is_max) ,
         calibration.n_flies_is_max = working_options.n_flies_is_max ;
     end
     
@@ -108,7 +191,7 @@ function core_tracker(...
     min_chunksize = 100;
     
     % break down the track file name
-    [~, track_file_base_name, ~] = fileparts(output_track_file_name) ;        
+    [~, track_file_base_name, ~] = fileparts(output_track_file_path) ;        
 
     % Synthesize the temporary track file folder name
     scratch_folder_path = get_scratch_folder_path() ;
@@ -136,30 +219,32 @@ function core_tracker(...
     n_frames = endframe - working_options.startframe + 1;
     
     % compute background from video if needed
-    if isempty(input_background_file_name) || working_options.force_bg_calib , 
-        did_succeed = core_tracker_fit_background_model(output_background_file_name, ...
-                                                        input_video_file_path, input_calibration_file_name, ...
+    if isempty(input_background_file_path) || working_options.force_bg_calib , 
+        ensure_file_does_not_exist(output_background_file_path) ;        
+        did_succeed = core_tracker_fit_background_model(output_background_file_path, ...
+                                                        input_video_file_path, input_calibration_file_path, ...
                                                         working_options) ;
         if ~did_succeed ,
             error('Background fitting failed') ;
         end
-        working_background_file_name = output_background_file_name ;
+        working_background_file_name = output_background_file_path ;
     else
-        working_background_file_name = input_background_file_name ;
+        working_background_file_name = input_background_file_path ;
     end
 
     % compute arena model from background model, if needed
     %tic_id = tic() ;
     if working_options.force_arena_calib || calibration.auto_detect ,
-        did_succeed = core_tracker_fit_arena(output_calibration_file_name, ...
-                                             working_background_file_name, input_calibration_file_name, ...
+        ensure_file_does_not_exist(output_calibration_file_path) ;        
+        did_succeed = core_tracker_fit_arena(output_calibration_file_path, ...
+                                             working_background_file_name, input_calibration_file_path, ...
                                              working_options) ;       
         if ~did_succeed ,
             error('Calibration failed') ;
         end
-        working_calibration_file_name = output_calibration_file_name ;
+        working_calibration_file_name = output_calibration_file_path ;
     else
-        working_calibration_file_name = input_calibration_file_name ;        
+        working_calibration_file_name = input_calibration_file_path ;        
     end
     %elapsed_time = toc(tic_id) ;
     %fprintf('Elapsed time to refit arena model was %g seconds.\n', elapsed_time) ;
@@ -261,18 +346,18 @@ function core_tracker(...
     %
     % Finally, combine trackes from chambers
     %
-    core_tracker_job_consolidate(output_track_file_name, ...
-                                 output_segmentation_file_name, ...
+    core_tracker_job_consolidate(output_track_file_path, ...
+                                 output_segmentation_file_path, ...
                                  per_chamber_track_file_name_from_chamber_index, ...
                                  per_chamber_segmentation_file_name_from_chamber_index, ...
                                  working_options) ;
     
     % compute features and learning files if specified
-    core_tracker_compute_features(output_features_file_name, output_features_csv_folder_name, output_jaaba_folder_name, ...
-                                  input_video_file_path, output_track_file_name, working_calibration_file_name, ...
+    core_tracker_compute_features(output_features_file_path, output_features_csv_folder_path, output_jaaba_folder_path, ...
+                                  input_video_file_path, output_track_file_path, working_calibration_file_name, ...
                                   working_options) ;
                               
     % Save the working options
     options = working_options ;
-    save(output_options_file_name,'options') ;
+    save(output_options_file_path,'options') ;
 end

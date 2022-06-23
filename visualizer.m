@@ -2768,7 +2768,7 @@ function saved = saveTrk(~,~)
         options.save_xls = numel(tmp) > 0;
         % recompute features and jaaba
         recompute = 1;
-        tracker_job('track_features', f_vid, f_res, f_calib, options, recompute);        
+        tracker_job_features(f_vid, f_res, f_calib, options, recompute);  % TODO: replace with core_tracker_compute_features() wrapper       
         % load the new features
         D = load(fullfile(files.path,files.feat)); feat = D.feat;
         delete(h)

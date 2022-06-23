@@ -20,7 +20,7 @@ function vinfo = video_open(filename, cache_size)
    % 
    if exist(filename,'file')
        % extend filename to use absolute path
-       filename = absolute_path(filename);
+       filename = absolute_filename(filename);
    else       
        error([filename ' does not exist']);
    end
@@ -140,7 +140,7 @@ function vinfo = video_open(filename, cache_size)
             vinfo.mmread.cache.f_end   = 0;      % last frame (may be < cache size)
           end
       catch %% In case mmread fails, use VideoReader
-          filename = absolute_path(filename);
+          filename = absolute_filename(filename);
           % store name and type
           vinfo.filename = filename;
           vinfo.type = 'vidobj';

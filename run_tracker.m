@@ -1,4 +1,51 @@
 function run_tracker(videos_struct, options, input_calibration_file_name)
+% Track (and calibrate) videos in a 'batch' style, without a graphical
+% interface.  Note that for batch use-cases, core_tracker() is now the
+% recommended interface.
+%
+% To run tracker, use:
+%
+%   tracker(videos, [options], [f_calib])
+%
+%  where [] denotes an optional parameter (default values used if set to []) and:
+%
+%    videos.            - videos to process through tracking pipeline
+%       dir_in          - directory containing input videos
+%       dir_out         - directory in which to save results
+%       filter          - file filter (eg '*.ufmf') (default: '*')
+%       
+%    options.           - cluster processing and output options
+%       max_minutes     - maximum number of minutes to process (default: inf)
+%       num_cores       - number of workers to process jobs in parallel (default: 1)
+%       granularity     - number of video frames per job (default: 10,000)
+%       num_chunks      - number of chunks to process (default: num_frames/granularity)
+%       save_JAABA      - write JAABA folders from features (default: false)
+%       save_xls        - save tracks and features to a folder of .csv files (default: false)
+%       save_seg        - save segmentation from tracking process (default: false)
+%       fr_samp         - Number of frames to sample when computing
+%                         background model. (default: 100)
+%       isdisplay       - Whether graphical display should be used for waitbars
+%                         etc.  If false, progress is shown on standard output.
+%                         (default: true)
+%       startframe      - Frame to start tracking on. Default = 1
+%       force_calib     - If true, arena calibration is done for each video, 
+%                         regardless of setting in calibration file (default: false)
+%       expdir_naming   - Whether to use JAABA-style experiment directory
+%                         naming scheme for files. (default: false)
+%       arena_r_mm      - Radius of the arena in mm. This will be used to
+%                         set the resolution (PPM, pixels per millimeter)
+%                         if a circular arena is automatically detected.
+%       n_flies         - Number of flies. Only used when run in
+%                         non-interactive mode to override input
+%                         calibration. (default: not defined)
+%       n_flies_is_max  - Whether n_flies is an upper limit on the number
+%                         of flies or an actual count. (default: false)
+%      
+%    f_calib            - File containing calibration data.  If missing or empty,
+%                         defaults to [videos.dir_in]/calibration.mat.  If
+%                         running without an interface, a calibration file must
+%                         be present.
+
     % Deal with options argument
     if nargin < 2 || isempty(options) ,
         options = [] ;
@@ -30,8 +77,8 @@ function run_tracker(videos_struct, options, input_calibration_file_name)
     
     % collect video information
     % convert input/output directories to absolute path form
-    videos_struct.dir_in  = absolute_path(videos_struct.dir_in);
-    videos_struct.dir_out = absolute_path(videos_struct.dir_out);
+    videos_struct.dir_in  = absolute_filename(videos_struct.dir_in);
+    videos_struct.dir_out = absolute_filename(videos_struct.dir_out);
     % check video list
     if ((~isfield(videos_struct,'filter')) || (isempty(videos_struct.filter)))
         videos_struct.filter = '*';
@@ -93,7 +140,7 @@ function run_tracker(videos_struct, options, input_calibration_file_name)
             output_features_csv_folder_path, output_jaaba_folder_path, output_options_file_path, ...
             output_segmentation_file_path, ...
             input_video_file_path, input_calibration_file_path, input_background_file_path, ...
-            options) ;
+            core_tracker_options) ;
     end
     
     % Finish up with the dialog

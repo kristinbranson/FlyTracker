@@ -5,8 +5,7 @@ function retval=is_filename_absolute(filename)
     % If absolute, the steady-state x will be "/" on Unix-like OSes, and
     % something like "C:\" on Windows.
     %
-    % Note that this will return true for the empty string.  This may be
-    % convoversial.  But, you know: garbage in, garbage out.
+    % Note that this will return false for the empty string.
     
     path=filename;
     parent=fileparts(path);
