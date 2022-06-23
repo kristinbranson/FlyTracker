@@ -141,17 +141,17 @@ function core_tracker(output_track_file_name, ...
     working_options = sanitize_tracker_options(options) ;
         
     % Convert all the input file/folder names to absolute paths
-    output_track_file_path = absolute_filename(output_track_file_name) ;
-    output_calibration_file_path = absolute_filename(output_calibration_file_name) ;
-    output_background_file_path = absolute_filename(output_background_file_name) ;
-    output_features_file_path = absolute_filename(output_features_file_name) ;
-    output_features_csv_folder_path = absolute_filename(output_features_csv_folder_name) ;
-    output_jaaba_folder_path = absolute_filename(output_jaaba_folder_name) ;
-    output_options_file_path = absolute_filename(output_options_file_name) ;
-    output_segmentation_file_path = absolute_filename(output_segmentation_file_name) ;
-    input_video_file_path = absolute_filename(input_video_file_name) ;
-    input_calibration_file_path = absolute_filename(input_calibration_file_name) ;
-    input_background_file_path = absolute_filename(input_background_file_name) ;    
+    output_track_file_path = absolute_filename_passing_empty(output_track_file_name) ;
+    output_calibration_file_path = absolute_filename_passing_empty(output_calibration_file_name) ;
+    output_background_file_path = absolute_filename_passing_empty(output_background_file_name) ;
+    output_features_file_path = absolute_filename_passing_empty(output_features_file_name) ;
+    output_features_csv_folder_path = absolute_filename_passing_empty(output_features_csv_folder_name) ;
+    output_jaaba_folder_path = absolute_filename_passing_empty(output_jaaba_folder_name) ;
+    output_options_file_path = absolute_filename_passing_empty(output_options_file_name) ;
+    output_segmentation_file_path = absolute_filename_passing_empty(output_segmentation_file_name) ;
+    input_video_file_path = absolute_filename_passing_empty(input_video_file_name) ;
+    input_calibration_file_path = absolute_filename_passing_empty(input_calibration_file_name) ;
+    input_background_file_path = absolute_filename_passing_empty(input_background_file_name) ;    
     
     % Delete any old output files
     ensure_file_does_not_exist(output_track_file_path) ;

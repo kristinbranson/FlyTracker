@@ -38,6 +38,6 @@ videos_struct.filter  = '*.ufmf' ;
 % Call the tracker.  Calling it with args means it will run noninteractively.
 % (Although currently it still shows graphical progress bars and such.)
 tic_id = tic() ;
-run_tracker(videos_struct, options, calibration_file_name) ;
+tracker(videos_struct, options, calibration_file_name) ;
 elapsed_time = toc(tic_id) ;
 fprintf('Elapsed time to track was %g seconds.\n', elapsed_time) ;
