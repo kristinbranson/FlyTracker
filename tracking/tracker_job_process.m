@@ -1,4 +1,4 @@
-function flag = tracker_job_process(f_vid, f_bg, f_calib, f_trks, fr, vinfo)  
+function flag = tracker_job_process(f_vid, f_bg, f_calib, f_trks, fr, options)  
   % Run detect,match,segment, and link, to obtain tracks for frame range (fr)
   flag = 0;
   % skip if output file exists
@@ -7,11 +7,7 @@ function flag = tracker_job_process(f_vid, f_bg, f_calib, f_trks, fr, vinfo)
      return;
   end  
   % open video 
-  do_close = 0;
-  if nargin < 6 || isempty(vinfo)
-    vinfo = video_open(f_vid);
-    do_close = 1;
-  end
+  vinfo = video_open(f_vid);
   % load background model
   bg = load(f_bg); bg = bg.bg;
   % load information file
@@ -24,10 +20,10 @@ function flag = tracker_job_process(f_vid, f_bg, f_calib, f_trks, fr, vinfo)
   end
   calib_main = calib;
   % run detector
-  dets = track_detect(vinfo,bg,calib,fr);
+  dets = track_detect(vinfo, bg, calib, fr, [], false, options) ;
+  video_close(vinfo) ;
   if isnumeric(dets) && ~dets, return; end
   % close video
-  if do_close, video_close(vinfo); end
   % process each chamber separately          
   for c=1:n_chambers      
       % skip if output file exists

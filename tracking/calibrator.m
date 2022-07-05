@@ -1323,7 +1323,7 @@ function acceptChambers(~,~)
     autoSetPointsize();
 
     % segment flies
-    vars.dets = track_detect(vinfo,bg,calib,[],{img});  
+    vars.dets = track_detect(vinfo,bg,calib,[],{img}, true);  
     vars.dets = track_segment(vars.dets,calib,0);
     updateSeg()
     
@@ -1484,7 +1484,7 @@ function randomPic(~,~)
     setAxis(mask_id,size(img));    
     calib.mask = calib.masks{mask_id};
     % update segmentation overlay
-    vars.dets = track_detect(vinfo,bg,calib,[],{img});
+    vars.dets = track_detect(vinfo,bg,calib,[],{img}, true);
     vars.dets = track_segment(vars.dets,calib,0);
     % update image to white out background
     if bg.invert,
@@ -1592,7 +1592,7 @@ end
 function updateFgThr(val)     
     calib.params.fg_th_weak = 1-val;
     calib.params.fg_th_strong = .2*calib.params.fg_th_weak + .8*calib.params.body_th_weak;
-    vars.dets = track_detect(vinfo,bg,calib,[],{vars.img});
+    vars.dets = track_detect(vinfo,bg,calib,[],{vars.img}, true);
     vars.dets = track_segment(vars.dets,calib,0);
     str = sprintf('%0.2f',val);
     set(handles.fg_thr_h,'String',str);
@@ -1614,7 +1614,7 @@ function updateBodThr(val)
     %calib.params.body_th_weak = val;
     calib.params.body_th_weak = 1-val;
     calib.params.fg_th_strong = .2*calib.params.fg_th_weak + .8*calib.params.body_th_weak;
-    vars.dets = track_detect(vinfo,bg,calib,[],{vars.img});
+    vars.dets = track_detect(vinfo,bg,calib,[],{vars.img}, true);
     vars.dets = track_segment(vars.dets,calib,0);
     str = sprintf('%0.2f',val);
     set(handles.bod_thr_h,'String',str);
@@ -1658,7 +1658,7 @@ function finish(~,~)
     calib.full_mask = zeros(size(calib.full_mask));
     for i=1:numel(calib.rois)
         calib.mask = calib.masks{i};
-        dets = track_detect(tmp_vinfo,bg,calib,[],imgs);
+        dets = track_detect(tmp_vinfo,bg,calib,[],imgs, true);
         n_flies = 0;
         for j=1:numel(imgs)
             n_flies = n_flies + dets.frame_data{j}.body_cc.NumObjects;
@@ -1683,7 +1683,7 @@ function finish(~,~)
     fr.start = 1;
     fr.step = round(tmp_vinfo.n_frames/100);
     fr.limit = tmp_vinfo.n_frames;
-    dets = track_detect(tmp_vinfo,bg,calib,fr,[],1);    
+    dets = track_detect(tmp_vinfo,bg,calib,fr,[],true);    
     n_frms = numel(dets.frame_data);
     
     num_flies = calib.n_flies;

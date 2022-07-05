@@ -31,36 +31,37 @@
 %       If calibration has multiple chambers, detections is a cell array of
 %       detections for each chamber.
 %
-function detections = track_detect(vinfo, bg, calib, frame_range, imgs, calibrating)
+function detections = track_detect(vinfo, bg, calib, frame_range, imgs, calibrating, options)
+    % Process args
     % set frame range
-    if ((nargin < 4) || isempty(frame_range))
+    if nargin < 4 || isempty(frame_range) ,
        frame_range.start = 0;
        frame_range.step  = 1;
        frame_range.limit = vinfo.n_frames;
     end    
-    % copy info from calibration
-    params      = calib.params; 
-    mask        = calib.mask;
-    [I,J]       = find(calib.mask);
-    roi         = [min(I),min(J),max(I),max(J)];
     % if imgs provded, update frame range
-    show_progress = 1;
-    if nargin < 6
-        calibrating = 0;
-    end
-    if nargin > 4 && ~isempty(imgs)
-        calibrating = 1;
+    if nargin < 5 || isempty(imgs) ,
+        use_imgs = 0;
+        show_progress = 1;
+    else
         use_imgs = 1;
         frame_range.start = 0;
         frame_range.step = 1;
         frame_range.limit = numel(imgs);
-        img = imgs{1};
         show_progress = 0;
-    else
-        img = video_read_frame(vinfo,1);
-        use_imgs = 0;
-    end 
-    %show_progress = ~calibrating;
+    end
+    if nargin < 6 || isempty(calibrating) ,
+        calibrating = 0 ;
+    end
+    if ~exist('options', 'var') || isempty(options) ,
+        options = tracker_default_options() ;
+    end
+    
+    % copy info from calibration    
+    params      = calib.params; 
+    mask        = calib.mask;
+    [I,J]       = find(calib.mask);
+    roi         = [min(I),min(J),max(I),max(J)];
     
     % initialize detections
     detections.frame_ids = ...
@@ -82,7 +83,7 @@ function detections = track_detect(vinfo, bg, calib, frame_range, imgs, calibrat
     
     if show_progress
         % initialize waitbar
-        display_available = feature('ShowFigureWindows');
+        do_use_display = options.isdisplay && feature('ShowFigureWindows') ;
         waitstr = 'Detecting flies';
         waitstep = max(1,floor(n_frames/100));
         if frame_range.limit < vinfo.n_frames || frame_range.start > 0
@@ -92,7 +93,7 @@ function detections = track_detect(vinfo, bg, calib, frame_range, imgs, calibrat
         if calibrating
             waitstr = 'Finalizing calibration';
         end        
-        if display_available
+        if do_use_display
             multiWaitbar(waitstr,0,'Color','g','CanCancel','on');
             waitObject = onCleanup(@() multiWaitbar(waitstr,'Close'));
         else
@@ -127,7 +128,7 @@ function detections = track_detect(vinfo, bg, calib, frame_range, imgs, calibrat
             end
         end    
         if show_progress
-            if display_available && mod(id_num,waitstep) == 0
+            if do_use_display && mod(id_num,waitstep) == 0
                 abort = multiWaitbar(waitstr,id_num/n_frames);
                 if abort, detections = 0; return; end
             elseif mod(id_num,waitstep) == 0
@@ -241,7 +242,7 @@ function detections = track_detect(vinfo, bg, calib, frame_range, imgs, calibrat
     
     % close waitbar
     if show_progress
-       if display_available
+       if do_use_display
            multiWaitbar(waitstr,'Close');
            drawnow
        else
