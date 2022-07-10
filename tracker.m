@@ -58,8 +58,8 @@ function tracker(videos, options, calibration_file_name)
 
    if nargin == 0
        % If tracker is started with no arguments, load interface
-       display_available = feature('ShowFigureWindows');
-       if display_available
+       is_display_available = feature('ShowFigureWindows');
+       if is_display_available
           tracker_interface();          
        else          
           disp('No display available: run tracker with arguments:') 

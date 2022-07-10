@@ -22,15 +22,18 @@
 %                           wing positions, leg positions, ...)
 %         .names          - new field containing names of fields in .track                        
 %
-function trks = track_segment(trks, calib, show_progress, chamber_str)
+function trks = track_segment(trks, calib, show_progress, chamber_str, options)
     params = calib.params;
     params.mean_axis_ratio = params.mean_major_axis/params.mean_minor_axis;    
     n_frames = numel(trks.frame_data);
     if nargin < 3 || isempty(show_progress)
         show_progress = 1;
     end    
-    if nargin < 4
+    if nargin < 4 || isempty(chamber_str) 
         chamber_str = '';
+    end
+    if nargin < 5 || isempty(options) 
+        options = tracker_default_options() ;
     end
     
     % check whether trks have been matched
@@ -60,12 +63,12 @@ function trks = track_segment(trks, calib, show_progress, chamber_str)
     
     % set waitbar
     if show_progress
-        display_available = feature('ShowFigureWindows');
+        do_use_display = options.isdisplay && feature('ShowFigureWindows') ;
         waitstr = 'Segmenting flies';
         waitstr = [chamber_str waitstr ': frames ' num2str(trks.frame_ids(1)) ...
                         '-' num2str(trks.frame_ids(end)+1)];
         waitstep = max(1,floor(n_frames/100));  
-        if display_available
+        if do_use_display
             multiWaitbar(waitstr,0,'Color','g','CanCancel','on');
             waitObject = onCleanup(@() multiWaitbar(waitstr,'Close'));
         else
@@ -173,7 +176,7 @@ function trks = track_segment(trks, calib, show_progress, chamber_str)
 
         % update waitbar
         if show_progress
-            if display_available && mod(i,waitstep) == 0 
+            if do_use_display && mod(i,waitstep) == 0 
                 abort = multiWaitbar(waitstr,i/n_frames);
                 if abort, trks = 0; return; end
             elseif mod(i,waitstep) == 0
@@ -802,7 +805,7 @@ function trks = track_segment(trks, calib, show_progress, chamber_str)
     
     % close waitbar
     if show_progress
-       if display_available
+       if do_use_display
            multiWaitbar(waitstr,'Close');
            drawnow
        else

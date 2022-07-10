@@ -53,9 +53,8 @@ function run_tracker(videos_struct, options, input_calibration_file_name)
     options = sanitize_tracker_options(options); 
 
     % Set display variables
-    is_display_available = feature('ShowFigureWindows');
+    do_use_display = options.isdisplay && feature('ShowFigureWindows') ;
     fs = 72/get(0,'ScreenPixelsPerInch'); % scale fonts to resemble OSX
-    do_use_display = is_display_available && options.isdisplay;
     
     % Deal with input_calibration_file_name argument
     if nargin < 3 || isempty(input_calibration_file_name) ,

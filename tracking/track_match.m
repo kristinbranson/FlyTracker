@@ -27,7 +27,7 @@
 %                        segmented into more body components (as this may
 %                        result in a potential identity swap)
 %
-function trks = track_match(detections, calib, chamber_str)
+function trks = track_match(detections, calib, chamber_str, options)
    if nargin < 3
        chamber_str = ''; % used to report progress
    end
@@ -52,7 +52,7 @@ function trks = track_match(detections, calib, chamber_str)
    params.use_default_fert = 0;
    
    % match atomic components
-   atomic_matches = compute_atomic_matches(detections, params, 1, chamber_str);      
+   atomic_matches = compute_atomic_matches(detections, params, 1, chamber_str, options);      
    if isnumeric(atomic_matches) && ~atomic_matches
        trks = 0; return;
    end
@@ -65,7 +65,7 @@ function trks = track_match(detections, calib, chamber_str)
 
    % revise detections and matches according to tracks cardinality   
    params.use_default_fert = 0;   % max fertility = 1 for all flies   
-   detections = revise_detections(trks, atomic_matches, params, chamber_str);         
+   detections = revise_detections(trks, atomic_matches, params, chamber_str, options);         
    if isnumeric(detections) && detections==0
        % user hit cancel during processing
        trks = 0; return;
@@ -74,7 +74,7 @@ function trks = track_match(detections, calib, chamber_str)
    % re-extract track sequences   
    if ~isnumeric(detections)
        % only if detections were updated
-       atomic_matches = compute_atomic_matches(detections, params, 2, chamber_str);               
+       atomic_matches = compute_atomic_matches(detections, params, 2, chamber_str, options);               
        if isnumeric(atomic_matches) && ~atomic_matches
            trks = 0; return;
        end
@@ -590,7 +590,7 @@ function [votes_for, count_valid_flies, votes_against] = compute_track_votes(tra
     end         
 end
 
-function [dets, matches] = revise_detections(tracks, matches, params, chamber_str)
+function [dets, matches] = revise_detections(tracks, matches, params, chamber_str, options)
     if nargin < 4
         chamber_str = '';
     end
@@ -621,12 +621,12 @@ function [dets, matches] = revise_detections(tracks, matches, params, chamber_st
     show_progress = n_mod_frames > 100;
     if show_progress
         % set waitbar
-        display_available = feature('ShowFigureWindows');
+        do_use_display = options.isdisplay && feature('ShowFigureWindows') ;
         waitstr = 'Revising detections';
         waitstr = [chamber_str waitstr ': frames ' num2str(tracks.frame_ids(1)) ...
                                '-' num2str(tracks.frame_ids(end)+1)];    
         waitstep = max(1,floor(n_mod_frames/100));                   
-        if display_available        
+        if do_use_display        
             multiWaitbar(waitstr,0,'Color','g','CanCancel','on');
             waitObject = onCleanup(@() multiWaitbar(waitstr,'Close'));   
         else
@@ -674,7 +674,7 @@ function [dets, matches] = revise_detections(tracks, matches, params, chamber_st
             if show_progress
                 % update waitbar
                 count = count+1;            
-                if display_available && mod(count,waitstep) == 0
+                if do_use_display && mod(count,waitstep) == 0
                    abort = multiWaitbar(waitstr,count/n_mod_frames);
                    if abort, dets = 0; return; end
                 elseif mod(count,waitstep) == 0
@@ -693,12 +693,12 @@ function [dets, matches] = revise_detections(tracks, matches, params, chamber_st
         buff_e = t_e < n_frames;
         tmp_dets.frame_data = tracks.frame_data(t_s-buff_s:t_e+buff_e);
         tmp_dets.frame_ids = t_s-buff_s:t_e+buff_e;
-        matches_new =  compute_atomic_matches(tmp_dets,params,0);
+        matches_new =  compute_atomic_matches(tmp_dets, params, 0, '', options) ;
         matches(t_s:t_e) = matches_new(1+buff_s:end-buff_e);        
     end
     if show_progress
         % close waitbar
-        if display_available
+        if do_use_display
            multiWaitbar(waitstr,'Close');
            drawnow
         else
@@ -876,7 +876,7 @@ end
 %       fert_max  - maximum fertility of detections in current frame
 %       fert_used - used fertility of detections in current frame
 %
-function matches = compute_atomic_matches(detections, params, caller_id, chamber_str)
+function matches = compute_atomic_matches(detections, params, caller_id, chamber_str, options)
    % initialize matching data structure
    n_frames = numel(detections.frame_ids);
    matches = cell([n_frames 1]);   
@@ -884,7 +884,7 @@ function matches = compute_atomic_matches(detections, params, caller_id, chamber
        caller_id = 1;
    end
    show_progress = caller_id > 0;
-   if nargin < 4
+   if nargin < 4 
        chamber_str = '';
    end
    % initialize fertility
@@ -900,7 +900,7 @@ function matches = compute_atomic_matches(detections, params, caller_id, chamber
    end
    % set waitbar
    if show_progress
-       display_available = feature('ShowFigureWindows');
+       do_use_display = options.isdisplay && feature('ShowFigureWindows') ;
        if caller_id == 1
         waitstr = 'Computing matches';
        else
@@ -909,7 +909,7 @@ function matches = compute_atomic_matches(detections, params, caller_id, chamber
        waitstr = [chamber_str waitstr ': frames ' num2str(detections.frame_ids(1)) ...
                        '-' num2str(detections.frame_ids(end)+1)];
        waitstep = max(1,floor(n_frames/100));            
-       if display_available
+       if do_use_display
            multiWaitbar(waitstr,0,'Color','g','CanCancel','on');
            waitObject = onCleanup(@() multiWaitbar(waitstr,'Close'));
        else
@@ -921,7 +921,7 @@ function matches = compute_atomic_matches(detections, params, caller_id, chamber
    for f = 1:(n_frames-1) 
       % update waitbar
       if show_progress
-          if display_available && mod(f,waitstep) == 0
+          if do_use_display && mod(f,waitstep) == 0
               abort = multiWaitbar(waitstr,f/(n_frames-1));
               if abort, matches = 0; return; end
           elseif mod(f,waitstep) == 0
@@ -1003,7 +1003,7 @@ function matches = compute_atomic_matches(detections, params, caller_id, chamber
    end   
    % close waitbar
    if show_progress
-      if display_available
+      if do_use_display
           multiWaitbar(waitstr,'Close');
       else
           for d=1:numel(num2str(percent))+1

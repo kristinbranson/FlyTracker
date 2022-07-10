@@ -57,7 +57,8 @@ function cost_mx = detection_match_costs(det_curr, det_next, PPM)
              dx2 = x1 - xc2; dy2 = y1 - yc2;
              dist1 = min(sqrt(dx1.*dx1 + dy1.*dy1));
              dist2 = min(sqrt(dx2.*dx2 + dy2.*dy2));
-             f_dist(b1,b2) = min(dist1,dist2);
+             f_dist_this_maybe = min(dist1,dist2) ;  % this seems to be empty occasionally --ALT, 2022-07-08
+             f_dist(b1,b2) = fif(isempty(f_dist_this_maybe), inf, f_dist_this_maybe) ;  % hopefully this is a reasonable patch
           end
        end
        % compute match cost matrix

@@ -63,10 +63,10 @@ function flag = tracker_job_process(f_vid, f_bg, f_calib, f_trks, fr, options)
       end
       fprintf('n. flies = %d\n',calib.n_flies);
       % match detections into tracklets
-      trks = track_match(dets_c,calib,chamber_str);
+      trks = track_match(dets_c, calib, chamber_str, options);
       if isnumeric(trks) && ~trks, return; end
       % segment foreground into bodyparts (wings, legs)
-      trks = track_segment(trks,calib,1,chamber_str);
+      trks = track_segment(trks, calib, 1, chamber_str, options);
       if isnumeric(trks) && ~trks, return; end
       % link tracklets      
       trks = track_link(trks,calib);

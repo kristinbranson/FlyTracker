@@ -17,7 +17,7 @@ function success = core_tracker_job_combine(output_per_chamber_track_file_name, 
   % initialize waitbar
   steps = 0;  
   n_steps = numel(atomic_track_file_name_from_chunk_index) + 1 + save_seg;
-  do_use_display = feature('ShowFigureWindows') && options.isdisplay ;
+  do_use_display = options.isdisplay && feature('ShowFigureWindows') ;
   waitstr = ['Combining tracks'];
   if do_use_display
      multiWaitbar(waitstr,0,'Color','g','CanCancel','on');
