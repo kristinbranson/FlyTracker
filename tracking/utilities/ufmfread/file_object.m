@@ -75,32 +75,27 @@ classdef file_object < handle
             result = (self.fid()>=n) ;    
         end
         
+        function filename = fopen(self)
+            % You can call the normal fopen() function on an FID, and it returns all this
+            % stuff.  And JAABA code actually does this in a few places. (Ah, I see---it's a
+            % way to check the validity of a FID! All return values are empty if the FID is
+            % invalid.) So we mimic this functionality here. Called like this, fopen()
+            % actually can return up to four things, but calling it that way seems to be
+            % quite slow (maybe only on NFS?). And JAABA code only ever uses the first
+            % return value, so that's all we support.
+            filename = fopen(self.fid()) ;
+        end
+        
         function fclose(self)
             fid = self.fid_ ;
             if isempty(fid) ,
                 % make it the canonical empty array
                 self.fid_ = [] ;
-            else
-                if fid >= 0 ,
-%                     if isempty(self.uid_) ,
-%                         warning('In file_object with *empty* UID, on file %s, about to fclose a file with fid %d', self.file_name_, fid) ;
-%                     else
-%                         warning('In file_object with UID %d, on file %s, about to fclose a file with fid %d', self.uid_, self.file_name_, fid) ;
-%                     end
-                    try
+            else                
+                if fid > 2 ,
+                    is_fid_valid = ~isempty(fopen(fid)) ;   % trick to test FID validity
+                    if is_fid_valid ,
                         fclose(fid) ;
-                    catch me
-                        if strcmp(me.identifier, 'MATLAB:FileIO:InvalidFid') ,
-                            % This sometimes happens, especially when you open the same file in a parfor loops, and I can't
-                            % figure out why.  I know this is crazy talk, but it almost seems like a Matlab
-                            % bug.
-                            % In any case, it shouldn't hurt anything to ignore it.
-                            % It also shouldn't hurt anything not to catch it, b/c Matlab downgrades it to a
-                            % warning since it happens in the destructor.  But this spares us a
-                            % worrisome-looking warning message.
-                        else
-                            rethrow(me) ;
-                        end
                     end
                 end
                 % make it the canonical empty array
