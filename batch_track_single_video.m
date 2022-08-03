@@ -48,4 +48,7 @@ function batch_track_single_video(output_folder_name, input_video_file_name, inp
                  input_calibration_file_path, ...
                  input_background_file_path, ...
                  options)
+             
+    % Declare victory
+    fprintf('Success: batch_track_single_video() is about to exit!\n') ;
 end
