@@ -226,7 +226,7 @@ function success = core_tracker_job_combine(output_per_chamber_track_file_name, 
   map(sortids) = 1:numel(sortids);
   trk.flags(:,1:2) = map(trk.flags(:,1:2)); 
   % save files
-  save(output_per_chamber_track_file_name,'trk'); %save([f_res(1:end-10) '-swaps.mat'],'swaps');  
+  save(output_per_chamber_track_file_name,'trk', '-v7.3'); %save([f_res(1:end-10) '-swaps.mat'],'swaps');  
   if save_seg      
      save(output_segmentation_file_name, 'seg', '-v7.3') ; %save([f_res(1:end-10) '-seg.mat'],'seg','-v7.3'); 
   end    
