@@ -57,7 +57,7 @@ function core_tracker_job_consolidate(output_track_file_name, ...
   end
   trk.flags = flags;
   % save tracks
-  save(output_track_file_name,'trk');
+  save(output_track_file_name,'trk','-v7.3');
   % delete previous files
   for i=1:n_chambers
       ensure_file_does_not_exist(per_chamber_track_file_name_from_chamber_index{i}) ;

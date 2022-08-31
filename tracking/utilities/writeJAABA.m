@@ -81,7 +81,7 @@ function writeJAABA(trkname,moviename,trk,feat,calib,expdir)
     end
 
     % save trx.mat
-    save(fullfile(expdir,'trx.mat'),'timestamps','trx')
+    save(fullfile(expdir,'trx.mat'),'timestamps','trx','-v7.3')
 
     % write perframe folder
     perframedir = fullfile(expdir,'perframe');
@@ -101,7 +101,7 @@ function writeJAABA(trkname,moviename,trk,feat,calib,expdir)
         end
         units.numerator = cell(1,0);
         units.denominator = cell(1,0);
-        save(fullfile(perframedir,[feat.names{i}]),'data','units')
+        save(fullfile(perframedir,[feat.names{i}]),'data','units','-v7.3')
     end
 
     % copy/soft-link movie

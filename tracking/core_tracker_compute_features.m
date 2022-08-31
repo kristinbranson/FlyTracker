@@ -8,7 +8,7 @@ function core_tracker_compute_features(output_feature_file_name, output_features
   % write feat file  
   trk = load_anonymous(input_tracking_file_name) ;
   feat = feat_compute(trk, calibration) ;
-  save(output_feature_file_name,'feat') ;
+  save(output_feature_file_name,'feat','-v7.3') ;
 
   % save csv files
   if options.save_xls
