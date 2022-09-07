@@ -45,13 +45,13 @@ for i = 1:nflies,
     ftd.trk.data(id,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_lengthl),...
     outtrx.trx(i).xwingl,outtrx.trx(i).ywingl,ismissingl] = ...
     FixWingNaNs(ftd.trk.data(id,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_anglel),...
-    ftd.trk.data(id,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_lengthl),i);
+    ftd.trk.data(id,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_lengthl),i,medianlength,outtrx);
   
   [ftd.trk.data(id,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_angler),...
     ftd.trk.data(id,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_lengthr),...
     outtrx.trx(i).xwingr,outtrx.trx(i).ywingr,ismissingr] = ...
     FixWingNaNs(ftd.trk.data(id,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_angler),...
-    ftd.trk.data(id,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_lengthr),i);
+    ftd.trk.data(id,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.wing_lengthr),i,medianlength,outtrx);
   nwingsdetected{i} = double(~ismissingl) + double(~ismissingr);
 
 end
@@ -163,30 +163,5 @@ data = nwingsdetected;
 units.num = {'unit'};
 units.den = cell(1,0);
 save(fullfile(perframedir,[cfn,'.mat']),'data','units');
-
-  function [angle,l,x,y,ismissing] = FixWingNaNs(angle,l,i)
-    
-    ismissing_angle = isnan(angle);
-    ismissing_l = isnan(l);
-    
-    % fill with zeros
-    angle(ismissing_angle) = 0;
-    
-    % interpolate
-    if all(ismissing_l),
-      l(:) = medianlength;
-    elseif nnz(ismissing_l) == 1,
-      l1 = l(ismissing_l);
-      l(:) = l1;
-    elseif any(ismissing_l),
-      l(ismissing_l) = interp1(find(~ismissing_l),l(~ismissing_l),find(ismissing_l));
-    end
-    
-    ismissing = ismissing_l | ismissing_angle;
-    
-    x = outtrx.trx(i).x + l.*cos(outtrx.trx(i).theta + pi-angle);
-    y = outtrx.trx(i).y + l.*sin(outtrx.trx(i).theta + pi-angle);
-
-  end
 
 end
