@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>FlyTracker</title>
+    <link rel="shortcut icon" type="image/x-icon" href="http://identity.caltech.edu/site_images/275-caltech-icon-orange-rgb.png" />
+    <style type="text/css">
+        html body {width: 100%; height: 100%; margin: 0px; background-color:#FFFFFF; font-family:arial;}
+        h1        {font-size:40px; font-family:arial; margin:0px; font-weight:normal}
+        div       {background-color:#FFFFFF; width:750px; border:1px solid; border-color:white; border-top-color:black;
+          overflow:scroll; margin:0px; position:relative; top:-11px; line-height: 140%; font-size:15px;}
+        button    {border:1px solid; font-size:12px; position:relative; top:-10px; z-index:10; width:100px; height:28px;background-color:#FFAA66}
+        button:hover {font-weight:bold}
+        label     {width:200px}
+        a         {color:#201075}
+    </style>
+  </head>
+    <body>
+    <center>
+      <br>
+      <br>
+      <h1>Caltech <b>FlyTracker</b></h1>
+      <br>
+        <button type="button", onclick="window.location.href='index.html'", style="border-bottom-color:white; background-color:#FFFFFF; background: linear-gradient(#FFDDBB, #FFFFFF);">about</button>
+        <button type="button", onclick="window.location.href='userguide.html'">user guide</button>
+        <button type="button", onclick="window.location.href='download.html'">download</button>
+        <button type="button", onclick="window.location.href='documentation.html'">documentation</button>
+        <button type="button", onclick="window.location.href='acknowledge.html'">acknowledge</button>
+        <div>
+          <p align="justify" style="margin-left:40px; margin-right:50px; margin-top:30px; z-index:0">
+          FlyTracker aims to <b>track the pose</b> (position, orientation, size, wing- and leg positions) of <b>multiple flies</b> and <b>maintain their identities</b> throughout a video. In addition to trajectories, it outputs <b>features</b> (such as velocity, facing angle to other fly, and wing angles) useful for <b>behavior analysis</b>.
+          </p>
+          <img src="images/flies.png" width="60%">
+          <img src="images/skel.png" width="16%" style="position:relative; top:-150px; left:20px">
+          <p align="justify" style="margin-left:40px; margin-right:50px; margin-top:0px; z-index:0">
+          Please <b>join our <a target="_blank" href="https://groups.google.com/d/forum/flytracker">google group</a></b> to receive announcements and post any questions or concerns!
+          </p>
+          <br>
+          <hr style="margin-left:40px; margin-right:50px;"></hr>
+          <b>Sample results</b>
+          <hr style="margin-left:40px; margin-right:50px;"></hr>
+          <br>
+          <b>Tracks the articulated pose of each fly</b> (video from Kenta Asahina, Salk Institute)
+          <br>
+          <embed width="630" height="445" src="https://www.youtube.com/embed/saYAAjbKtdA?controls=0&showinfo=0&rel=0&autoplay=0" frameborder="0" allowfullscreen></embed>
+          <br><br>
+          <b>Tracks multiple flies</b> (video from Kristin Branson, Janelia Research Campus)
+          <br>
+          <embed width="630" height="628" src="https://www.youtube.com/embed/GwkH1wVL4tk?controls=0&showinfo=0&rel=0&autoplay=0" frameborder="0" allowfullscreen></embed>
+          <br><br>
+          <b>Can be applied to other model organisms</b> (video from <a target="_blank" href="http://www.idtracker.es/download">http://www.idtracker.es/download</a>)
+          <br>
+          <embed width="630" height="445" src="https://www.youtube.com/embed/vaBwFsKeqRo?controls=0&showinfo=0&rel=0&autoplay=0" frameborder="0" allowfullscreen></embed>
+          <br><br>
+      </div>
+        <br>
+  </center>
+
+<p><i>This documentation is a copy of the original documentation from http://www.vision.caltech.edu/Tools/FlyTracker/</i></p>
+
+<!-- Start of StatCounter Code for Default Guide -->
+<script type="text/javascript">
+var sc_project=10704170; 
+var sc_invisible=1; 
+var sc_security="67633b64"; 
+var scJsHost = (("https:" == document.location.protocol) ?
+"https://secure." : "http://www.");
+document.write("<sc"+"ript type='text/javascript' src='" +
+scJsHost+
+"statcounter.com/counter/counter.js'></"+"script>");
+</script>
+<noscript><div class="statcounter"><a title="web analytics"
+href="http://statcounter.com/" target="_blank"><img
+class="statcounter"
+src="http://c.statcounter.com/10704170/0/67633b64/1/"
+alt="web analytics"></a></div></noscript>
+<!-- End of StatCounter Code for Default Guide -->
+
+  </body>
+</html>

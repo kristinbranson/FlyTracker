@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>FlyTracker</title>
+    <style type="text/css">
+      html {height: 100%; min-height: 950px;}
+      html body {width: 100%; min-height: 100%; margin: 0px; font-family:arial;}
+      h1        {font-size:25px; font-family:arial; margin:0px; font-weight:normal}
+      div       {background-color:#FFFFFF; width:830px; height:600px; border:1px solid; overflow:hidden; margin:0px; position:relative; line-height: 140%; font-size:15px}
+      button    {border:1px solid; font-size:14px; position:relative; top:0px; z-index:10; width:151px; height:50px; margin-top:-1px;}
+      button:hover {background-color:red; font-weight:bold}
+      label     {width:200px}
+      a         {color:#201075}
+      p         {line-height:140%; font-size:15px;}
+      li        {font-size:15px;}
+      </style>
+  </head>
+  <body>
+  <center>
+    <p>
+        <br>
+        <a href="userguide.html">back</a>
+        <br><br>
+        <p style="width:80%" align="justify">
+        <b>Problem [Visualizer]: Video playing is slow or choppy</b><br>
+        <b>Solution:</b> If the video being visualized is large or highly compressed, reading the video frames can be time consuming. 
+                 One of the following tips might be helpful:<br>
+           <ul align="justify" style="margin-left:-30px; margin-top:-5px; width:75%; line-height:130%">
+           <li>Save video in grayscale (1 color channel rather than 3) since the tracker converts all images to grayscale before processing. </li>
+       	   <li>Save video with low compression before tracking and annotating it. (Compress at a later time for space saving reasons.)</li>
+       	   <li>Use only as much spatial resolution as you need for your task.</li>
+       	   <li>If you have recorded multiple chambers, you could crop the video along chambers and store it as multiple smaller video files.</li>
+           <li>If none of the above seems feasible, you can visualize the video with "show image" disabled. This way you can scan through the video fast,
+               looking only at the tracking overlay, and once something interesting comes along enable "show image".</li>
+           </ul>
+        </p>
+        <br>
+          <p style="width:80%" align="justify">
+          <b>Question [JAABA support]: How do I run JAABA on FlyTracker data?</b><br>
+          <b>Answer:</b> Download <a href="http://www.vision.caltech.edu/Tools/FlyTracker/download/featureConfigEyrun.xml">featureConfigEyrun.xml</a> and save it as 
+           JAABA/perframe/params/featureConfigEyrun.xml (which might replace an earlier version of the file). When you start a new JAABA project select 
+           eyrun_flies as target type. If you have multiple flies tracked in an arena, relational features are not computed by FlyTracker, 
+           in that case click [advanced] --> [choose perframe features] and select only features log_vel to dist_to_wall_diff2.
+        </p>
+        <br>
+        <p style="width:80%;" align="justify">
+        <b>Problem [JAABA support]: Cannot write softlinks on Windows (copying movie instead)</b><br>
+        <b>Solution:</b> This seems to be a common issue for Windows 7 and 10 (possibly other versions that 
+          we haven't tested). If you are receiving a message that says 
+           "you do not have sufficient privilege to perform this operation", the reason is that the current 
+           user does not have permission to write softlinks. To change that, take the following steps 
+           (<a target="_blank" href="http://superuser.com/questions/124679/how-do-i-create-a-link-in-windows-7-home-premium-as-a-regular-user/125981#125981">source</a>):<br>
+           <ol start="0" align="justify" style="margin-left:-30px; margin-top:-5px; width:75%; line-height:130%">
+           <li> For some odd reason, "Administrator" users cannot write softlinks, even with the necessary permissions. 
+              Before you start, make sure that the user that is used to run Matlab is a "Standard user" and that you have
+              access to another account that is an "Administrator" user.</li>
+           <li> While logged in as an "Administrator" user, launch secpol.msc via <i>Start</i> or <i>Start --> Run</i>.</li>
+           <li> Open <i>Security Settings --> Local Policies --> User Rights Assignment</i>.</li>
+           <li> In the list, find the <i>"Create symbolic links"</i> item, which represents SeCreateSymbolicLinkPrivilege.</li>
+           <li> Double-click on the item and add your "Standard user" to the list.</li>
+           <li> You may need to log out and in for the changes to take effect.</li>
+           </ol>
+        </p>
+    </p>
+    </center>
+
+    <!-- Start of StatCounter Code for Default Guide -->
+<script type="text/javascript">
+var sc_project=10704170; 
+var sc_invisible=1; 
+var sc_security="67633b64"; 
+var scJsHost = (("https:" == document.location.protocol) ?
+"https://secure." : "http://www.");
+document.write("<sc"+"ript type='text/javascript' src='" +
+scJsHost+
+"statcounter.com/counter/counter.js'></"+"script>");
+</script>
+<noscript><div class="statcounter"><a title="web analytics"
+href="http://statcounter.com/" target="_blank"><img
+class="statcounter"
+src="http://c.statcounter.com/10704170/0/67633b64/1/"
+alt="web analytics"></a></div></noscript>
+    <!-- End of StatCounter Code for Default Guide -->
+    
+  </body>
+</html>
