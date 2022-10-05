@@ -9,7 +9,7 @@ function core_tracker(output_track_file_name, ...
                       input_video_file_name, ...
                       input_calibration_file_name, ...
                       input_background_file_name, ...
-                      options)
+                      input_options)
     
     % Track (and calibrate) videos in a 'batch' style, without a graphical
     % interface.
@@ -133,12 +133,12 @@ function core_tracker(output_track_file_name, ...
     % are ignored.
     
     % Deal with args
-    if ~exist('options', 'var') || isempty(options) ,       
-        options = [] ; 
+    if ~exist('options', 'var') || isempty(input_options) ,       
+        input_options = [] ; 
     end
     
     % Fill in unspecified options, delete unused fields
-    working_options = sanitize_tracker_options(options) ;
+    working_options = sanitize_tracker_options(input_options) ;
         
     % Convert all the input file/folder names to absolute paths
     output_track_file_path = absolute_filename_passing_empty(output_track_file_name) ;
@@ -296,7 +296,7 @@ function core_tracker(output_track_file_name, ...
                 tracker_job_process(input_video_file_path, working_background_file_name, working_calibration_file_name, ...
                                     atomic_track_file_name_from_chamber_index_from_chunk_index(:,chunk_index)', ...
                                     start_step_limit_from_chunk_index(chunk_index), ...
-                                    options) ;
+                                    working_options) ;
             did_succeed_from_chunk_index(chunk_index) = did_succeed;
         end
         if ~all(did_succeed_from_chunk_index)
@@ -309,7 +309,7 @@ function core_tracker(output_track_file_name, ...
                 tracker_job_process(input_video_file_path, working_background_file_name, working_calibration_file_name, ...
                                     atomic_track_file_name_from_chamber_index_from_chunk_index(:,chunk_index)', ...
                                     start_step_limit_from_chunk_index(chunk_index), ...
-                                    options) ;
+                                    working_options) ;
             if ~did_succeed , 
                 error('Error while tracking chunk %d', chunk_index) ;
             end
@@ -361,5 +361,5 @@ function core_tracker(output_track_file_name, ...
                               
     % Save the working options
     options = working_options ;
-    save(output_options_file_path,'options') ;
+    save(output_options_file_path, 'options') ;
 end
