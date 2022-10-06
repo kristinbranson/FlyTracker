@@ -27,13 +27,14 @@ function batch_track_single_video(output_folder_name, input_video_file_name, inp
     % Check that the input video and calibration files exist.  We don't do anything
     % if the calibration file does not exist.
     if ~exist(input_video_file_path, 'file') ,
-        error('Input video file %s does not exist') ;
+        error('Input video file %s does not exist', input_video_file_path) ;
     end
     if ~exist(input_calibration_file_path, 'file') ,
-        error('Calibration file %s does not exist') ;
+        error('Calibration file %s does not exist', input_calibration_file_path) ;
     end    
-    % Delete the output folder, so we can start fresh
-    ensure_folder_does_not_exist(output_folder_path) ;
+    
+%     % Delete the output folder, so we can start fresh
+%     ensure_folder_does_not_exist(output_folder_path) ;
     
     % Call the core tracker
     core_tracker(output_track_file_path, ...

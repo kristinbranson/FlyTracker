@@ -1,7 +1,7 @@
 function success = core_tracker_job_combine(output_per_chamber_track_file_name, ...
                                             output_segmentation_file_name, ...
                                             atomic_track_file_name_from_chunk_index, ...
-                                            calibration_file_name, ...
+                                            calibration_or_calibration_file_name, ...
                                             options)
   % Join output of multiple chunks into a single file
   success = 0 ;
@@ -12,7 +12,13 @@ function success = core_tracker_job_combine(output_per_chamber_track_file_name, 
       ensure_file_does_not_exist(output_segmentation_file_name) ;
   end
   % load info
-  calib = load(calibration_file_name); calib = calib.calib;
+  if isstruct(calibration_or_calibration_file_name) ,
+      calib = calibration_or_calibration_file_name ;
+  else
+      calibration_file_name = calibration_or_calibration_file_name ;
+      calibration_file_contents = load(calibration_file_name) ; 
+      calib = calibration_file_contents.calib ;
+  end
   im_size = size(calib.mask);
   % initialize waitbar
   steps = 0;  

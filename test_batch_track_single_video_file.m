@@ -1,6 +1,6 @@
 script_folder_name = fileparts(mfilename('fullpath')) ;
-read_only_input_folder_name = fullfile(script_folder_name, 'yoshi-short-test-video-core-tracker-read-only') ;
-working_folder_name = fullfile(script_folder_name, 'yoshi-short-test-video-core-tracker') ;
+read_only_input_folder_name = fullfile(script_folder_name, 'yoshi-short-test-video-read-only') ;
+working_folder_name = fullfile(script_folder_name, 'yoshi-short-test-video') ;
 
 % Delete the input folder, re-copy from read-only version
 if exist(working_folder_name, 'file') ,
@@ -10,7 +10,7 @@ system_from_list_with_error_handling({'cp', '-R', '-T', read_only_input_folder_n
 
 % Specify input, output paths
 input_video_file_name = fullfile(working_folder_name, 'movie_14-PAEL-test-01_cam_1.ufmf') ;
-input_calibration_file_name = fullfile(working_folder_name, 'movie_14-PAEL-test-01_cam_1.input.calibration.mat') ;
+input_calibration_file_name = fullfile(working_folder_name, 'calibration.mat') ;
 output_folder_name = fullfile(working_folder_name, 'movie_14-PAEL-test-01_cam_1.flytracker') ;
 
 % Set options

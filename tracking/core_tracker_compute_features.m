@@ -1,9 +1,10 @@
 function core_tracker_compute_features(output_feature_file_name, output_features_csv_folder_name, output_jaaba_folder_name, ...
-                                       input_video_file_name, input_tracking_file_name, input_calibration_file_name, ...
+                                       input_video_file_name, input_tracking_file_name, calibration, ...
                                        options)
                                    
+  %
   % Compute features from tracking data
-  calibration = load_anonymous(input_calibration_file_name) ;
+  %
 
   % write feat file  
   trk = load_anonymous(input_tracking_file_name) ;

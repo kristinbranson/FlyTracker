@@ -1,4 +1,4 @@
-function flag = tracker_job_process(f_vid, f_bg, f_calib, f_trks, fr, options)  
+function flag = tracker_job_process(f_vid, f_bg, f_calib_or_calib, f_trks, fr, options)  
   % Run detect,match,segment, and link, to obtain tracks for frame range (fr)
   flag = 0;
   % skip if output file exists
@@ -10,8 +10,14 @@ function flag = tracker_job_process(f_vid, f_bg, f_calib, f_trks, fr, options)
   vinfo = video_open(f_vid);
   % load background model
   bg = load(f_bg); bg = bg.bg;
-  % load information file
-  calib = load(f_calib); calib = calib.calib;
+  % load calibration
+  if isstruct(f_calib_or_calib) ,
+      calib = f_calib_or_calib ;
+  else
+      f_calib = f_calib_or_calib ;
+      f_calib_contents = load(f_calib); 
+      calib = f_calib_contents.calib;
+  end
   calib.mask = zeros(size(calib.mask));
   valid = find(calib.valid_chambers);
   n_chambers = numel(valid);  

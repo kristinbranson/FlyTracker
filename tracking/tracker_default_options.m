@@ -17,4 +17,9 @@ function options = tracker_default_options()
     options.n_flies = [] ;
     options.arena_r_mm = [] ;
     options.n_flies_is_max = false ;
+    options.do_delete_intermediate_results = true ;  % setting this to false is sometimes useful when debugging
+    options.do_use_scratch_folder_for_intermediates = true ;  
+        % Setting this to false creates a folder that is sibling to the output file for
+        % intermediate results.  Sometimes useful when debugging.
+    options.do_recompute_tracking = false ;
 end
