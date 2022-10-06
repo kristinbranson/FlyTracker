@@ -22,8 +22,13 @@ function options = sanitize_tracker_options(input_options)
         end
         for i = 1 : length(extra_names) ,
             name = extra_names{i} ;
-            warning('FlyTracker:extraOption', 'Ignoring unused field "%s" from options', name) ;
-            options = rmfield(options, name) ;                        
+            if strcmp(name, 'force_tracking') ,
+                warning('FlyTracker:oldOption', 'Translating old-style option field "force_tracking" to new-style "do_recompute_tracking" field') ;
+                options.do_recompute_tracking = input_options.force_tracking ;
+            else
+                warning('FlyTracker:extraOption', 'Ignoring unused field "%s" from options', name) ;
+                options = rmfield(options, name) ;
+            end
         end
     end    
     
