@@ -144,7 +144,7 @@ function core_tracker(output_track_file_name, ...
     %                         If true, tracking is computed even if output_track_file_name
     %                         already exists.  Otherwise, tracking is skipped if 
     %                         output_track_file_name already exists.
-    
+    %
     % If any of these fields are missing from options, the default value is used. If
     % options contains extra fields not specified here, a warning is issued and they
     % are ignored.

@@ -1,8 +1,8 @@
-function batch_track_single_video(output_folder_name, input_video_file_name, input_calibration_file_name, options)
-    % Runs flytracker, without further user interaction, on a single video.  Uses calibration in
-    % input_calibration_file_name, and does not modify that file.  options argument
-    % is optional, all other arguments are required.
-    % See documentation of core_tracker() for details on options.
+function simple_noninteractive_flytracker(output_folder_name, input_video_file_name, input_calibration_file_name, options)
+    % Runs flytracker, without further user interaction, on a single video.  Uses
+    % calibration in input_calibration_file_name, and does not modify that file.
+    % options argument is optional, all other arguments are required. See
+    % documentation of core_tracker() for details on options.
 
     % Handle case of missing options
     if ~exist('options', 'var') || isempty(options) ,
@@ -33,9 +33,6 @@ function batch_track_single_video(output_folder_name, input_video_file_name, inp
         error('Calibration file %s does not exist', input_calibration_file_path) ;
     end    
     
-%     % Delete the output folder, so we can start fresh
-%     ensure_folder_does_not_exist(output_folder_path) ;
-    
     % Call the core tracker
     core_tracker(output_track_file_path, ...
                  output_calibration_file_path, ...
@@ -49,7 +46,4 @@ function batch_track_single_video(output_folder_name, input_video_file_name, inp
                  input_calibration_file_path, ...
                  input_background_file_path, ...
                  options)
-             
-    % Declare victory
-    fprintf('Success: batch_track_single_video() is about to exit!\n') ;
 end

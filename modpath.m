@@ -1,7 +1,13 @@
 function modpath()
     this_file_path = mfilename('fullpath') ;
     this_folder_path = fileparts(this_file_path) ;
-    addpath(degit(genpath(this_folder_path))) ;
+    
+    addpath(fullfile(this_folder_path, 'params')) ;
+    addpath(fullfile(this_folder_path, 'scripts')) ;
+    addpath(fullfile(this_folder_path, 'tests')) ;
+    addpath(degit(genpath(fullfile(this_folder_path, 'tracking')))) ;
+    
+    addpath(this_folder_path) ;
 end
 
 

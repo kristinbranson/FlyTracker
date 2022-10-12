@@ -1,4 +1,4 @@
-function tracker(videos, options, calibration_file_name)
+function tracker(videos, options, calibration_file_name, vinfo_or_video_file_name)
 % Track (and calibrate) videos.
 %
 % To run tracker with interface, use:
@@ -7,9 +7,9 @@ function tracker(videos, options, calibration_file_name)
 %
 % To run tracker without interface, use:
 %
-%   tracker(videos, [options], [f_calib])
+%   tracker(videos, [options], [f_calib], [vinfo_or_video_file_name])
 %
-%  where [] denotes an optional parameter (default values used if set to []) and:
+% where [] denotes an optional parameter (default values used if set to []) and:
 %
 %    videos.            - videos to process through tracking pipeline
 %       dir_in          - directory containing input videos
@@ -46,8 +46,12 @@ function tracker(videos, options, calibration_file_name)
 %                         running without an interface, a calibration file must
 %                         be present.
 %
-% Note that for batch use-cases, core_tracker() is now the recommended interface
-% to FlyTracker.
+%    vinfo_or_video_file_name
+%                       - If present, overrides any information provided in 
+%                         videos.  The single video file indicated by this 
+%                         argument is used as input, and the containing folder
+%                         is used as the output folder.
+
 
    % add tracker to path if its not there already
    check = which('is_atomic_detection');
@@ -70,7 +74,7 @@ function tracker(videos, options, calibration_file_name)
        % If tracker is run with arguments, make sure all fields are entered
        if nargin < 2, options = []; end
        if nargin < 3, calibration_file_name = []; end
-       run_tracker(videos, options, calibration_file_name) ;
+       if nargin < 4, vinfo_or_video_file_name = []; end
+       run_tracker(videos, options, calibration_file_name, vinfo_or_video_file_name) ;
    end
 end
-
