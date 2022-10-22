@@ -19,6 +19,11 @@
 %    centers     - n_chambersx2 matrix containing chamber centers
 %
 function [centers, r, w, h] = calib_chamber_detect(bg, n_chambers, shape, r, w, h, options)
+    % Deal with args
+    if ~exist('options', 'var') || isempty(options) ,
+        options = struct() ;
+        options.isdisplay = true ;
+    end
     % initialize waitbar
     do_use_display = options.isdisplay && feature('ShowFigureWindows') ;
     waitstr = 'Detecting chambers';

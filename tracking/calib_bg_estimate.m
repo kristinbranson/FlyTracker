@@ -40,6 +40,10 @@ function bg = calib_bg_estimate(vinfo, PPM, frame_range, options)
       frame_range.limit = vinfo.n_frames-1;
       frame_range.step  = floor((vinfo.n_frames-1)/(n_imgs-1));
    end   
+   if nargin < 4 || isempty(options) ,
+       options = struct() ;
+       options.isdisplay = true ;
+   end
    frames = (frame_range.start):(frame_range.step):(frame_range.limit-1);
    % initialize waitbar
    do_use_display = options.isdisplay && feature('ShowFigureWindows') ;
