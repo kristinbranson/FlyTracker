@@ -1,8 +1,8 @@
 function test_core_tracker()
     script_folder_name = fileparts(mfilename('fullpath')) ;
     flytracker_folder_path = fileparts(script_folder_name) ;
-    flydisco_folder_path =  fileparts(flytracker_folder_path) ;
-    flytracker_test_files_folder_path = fullfile(flydisco_folder_path, 'flytracker-test-files') ;
+    flytracker_parent_folder_path =  fileparts(flytracker_folder_path) ;
+    flytracker_test_files_folder_path = fullfile(flytracker_parent_folder_path, 'flytracker-test-files') ;
     read_only_input_folder_name = fullfile(flytracker_test_files_folder_path, 'yoshi-short-test-video-read-only') ;
     working_folder_name = fullfile(flytracker_test_files_folder_path, 'yoshi-short-test-video') ;
     
