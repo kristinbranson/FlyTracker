@@ -95,9 +95,8 @@ function [centers, r, w, h] = calib_chamber_detect(bg, n_chambers, shape, r, w, 
     end
     
     % Determine candidate radius / (width,height) range
-    arena_size_fractional_search_range = options.arena_size_fractional_search_range ;
-    max_fractional_arena_size = 1 + arena_size_fractional_search_range ;  % e.g. 1.1
-    min_fractional_arena_size = 1/max_fractional_arena_size ;  % e.g. 1/1.1 ~ 0.9
+    min_fractional_arena_size = options.min_fractional_arena_size ;  % e.g. 0.9
+    max_fractional_arena_size = options.max_fractional_arena_size ;  % e.g. 1.1
     n_rows = floor(sqrt(n_chambers));
     n_cols = ceil(n_chambers/n_rows);
     dims = size(edges); dims = sort(dims);
@@ -106,8 +105,8 @@ function [centers, r, w, h] = calib_chamber_detect(bg, n_chambers, shape, r, w, 
     if is_arena_circular
         if ~isempty(r)
             baseline_radius = round(r/scale);
-            if arena_size_fractional_search_range == 0 ,
-                radius_range = baseline_radius ;
+            if min_fractional_arena_size == max_fractional_arena_size ,
+                radius_range = round(baseline_radius*max_fractional_arena_size) ;
             else
                 radius_min = round(baseline_radius*min_fractional_arena_size) ;
                 radius_max = round(baseline_radius*max_fractional_arena_size) ;
@@ -128,9 +127,9 @@ function [centers, r, w, h] = calib_chamber_detect(bg, n_chambers, shape, r, w, 
         if ~isempty(w) && ~isempty(h)
             baseline_width = round(w/scale);
             baseline_height = round(h/scale);            
-            if arena_size_fractional_search_range == 0 ,
-                width_range = baseline_width ;
-                height_range = baseline_height ;
+            if min_fractional_arena_size == max_fractional_arena_size ,
+                width_range = round(baseline_width*max_fractional_arena_size) ;
+                height_range = round(baseline_height*max_fractional_arena_size) ;
             else
                 width_min = round(baseline_width*min_fractional_arena_size);
                 width_max = round(baseline_width*max_fractional_arena_size);

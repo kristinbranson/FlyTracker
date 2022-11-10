@@ -144,15 +144,16 @@ function core_tracker(output_track_file_name, ...
     %                         If true, tracking is computed even if output_track_file_name
     %                         already exists.  Otherwise, tracking is skipped if 
     %                         output_track_file_name already exists.
-    %       arena_size_fractional_search_range -
+    %       min_fractional_arena_size -
+    %       max_fractional_arena_size -
     %                         If arena calibration is done, the range of
     %                         possible arena sizes to consider when fitting,
     %                         relative to the arena size in the input
-    %                         calibration.  E.g. if this is 0.1, then for a
-    %                         circular arena, arena radii of r/1.1 to r*1.1 will
+    %                         calibration.  E.g. if these are 0.9 and 1.1, respectively, then for a
+    %                         circular arena, arena radii of 0.9*r to 1.1*r will
     %                         be considered, where r is the arena radius in the
-    %                         input calibration.  Set to 0 to fix the arena
-    %                         size.  (default: 0.1)
+    %                         input calibration.  Set both to 1 to fix the arena
+    %                         size.  (defaults: 0.9, 1.1)
     %
     % If any of these fields are missing from options, the default value is used. If
     % options contains extra fields not specified here, a warning is issued and they
