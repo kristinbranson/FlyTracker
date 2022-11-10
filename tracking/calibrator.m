@@ -83,7 +83,8 @@ function init_interface()
     sub_width  = im_width*const.sub_height/im_height;
     fig_height = const.sub_height + 60;
     fig_width  = sub_width + 300;
-    fig_h = figure('Name','FlyTracker-1.0.5: Calibrator','NumberTitle','off', ...
+    figure_name = sprintf('FlyTracker-%s: Calibrator', flytracker_version_string()) ;
+    fig_h = figure('Name',figure_name,'NumberTitle','off', ...
         'Position',[scrsz(3)/2-fig_width/2 scrsz(4)/2-fig_height/2 fig_width fig_height],...
         'Color',.94*[1 1 1]);
     set(fig_h,'MenuBar','none','Resize','off','CloseRequestFcn',@uiClose)

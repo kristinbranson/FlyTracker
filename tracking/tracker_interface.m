@@ -18,8 +18,9 @@ function tracker_interface()
     scrsz = get(0,'ScreenSize');
     fig_width = 620;
     fig_height = 500;
+    figure_name = sprintf('FlyTracker-%s', flytracker_version_string()) ;
     fig_h = figure('Position',[scrsz(3)/2-fig_width/2 scrsz(4)/2-fig_height/2 fig_width fig_height],...
-        'Name','FlyTracker-1.0.5','NumberTitle','off','Color',.94*[1 1 1]);
+        'Name',figure_name,'NumberTitle','off','Color',.94*[1 1 1]);
     set(fig_h,'MenuBar','none')
     set(fig_h,'Resize','off')
     set(fig_h,'CloseRequestFcn',@ui_close)
