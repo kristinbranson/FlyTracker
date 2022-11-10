@@ -22,4 +22,5 @@ function options = tracker_default_options()
         % Setting this to false creates a folder that is sibling to the output file for
         % intermediate results.  Sometimes useful when debugging.
     options.do_recompute_tracking = false ;
+    options.arena_size_fractional_search_range = 0.1 ;
 end

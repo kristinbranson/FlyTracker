@@ -20,9 +20,20 @@
 %
 function [centers, r, w, h] = calib_chamber_detect(bg, n_chambers, shape, r, w, h, options)
     % Deal with args
+    if ~exist('shape', 'var')  ,
+        shape = [] ;
+    end
+    if ~exist('r', 'var')  ,
+        r = [] ;
+    end
+    if ~exist('w', 'var')  ,
+        w = [] ;
+    end
+    if ~exist('h', 'var')  ,
+        h = [] ;
+    end
     if ~exist('options', 'var') || isempty(options) ,
-        options = struct() ;
-        options.isdisplay = true ;
+        options = tracker_default_options() ;
     end
     % initialize waitbar
     do_use_display = options.isdisplay && feature('ShowFigureWindows') ;
@@ -65,14 +76,14 @@ function [centers, r, w, h] = calib_chamber_detect(bg, n_chambers, shape, r, w, 
     end
     
     % Determine shape of arena
-    if nargin > 2 && ~isempty(shape)
-        CIRCULAR = strcmp(shape,'circular');
+    if ~isempty(shape)
+        is_arena_circular = strcmp(shape,'circular');
     else
         % histogram gradients of magnitute above the threshold
-        n = hist(mod(dir(edges>0),90),4); 
+        n = hist(mod(dir(edges>0),90),4);  %#ok<HIST> 
         n = sort(n);
         % check whether chambers are circular or rectangular
-        CIRCULAR = n(2) >.2*n(3);
+        is_arena_circular = n(2) >.2*n(3);
     end
 
     % Downsize larger videos for faster processing
@@ -84,17 +95,24 @@ function [centers, r, w, h] = calib_chamber_detect(bg, n_chambers, shape, r, w, 
     end
     
     % Determine candidate radius / (width,height) range
+    arena_size_fractional_search_range = options.arena_size_fractional_search_range ;
+    max_fractional_arena_size = 1 + arena_size_fractional_search_range ;  % e.g. 1.1
+    min_fractional_arena_size = 1/max_fractional_arena_size ;  % e.g. 1/1.1 ~ 0.9
     n_rows = floor(sqrt(n_chambers));
     n_cols = ceil(n_chambers/n_rows);
     dims = size(edges); dims = sort(dims);
     split_rows = dims(1)/n_rows;
     split_cols = dims(2)/n_cols;
-    if CIRCULAR
-        if nargin > 3 && ~isempty(r)
-            radius_range = round(r/scale);
-            radius_min = round(radius_range*0.9);
-            radius_max = round(radius_range*1.1);
-            radius_range = radius_min:radius_max;
+    if is_arena_circular
+        if ~isempty(r)
+            baseline_radius = round(r/scale);
+            if arena_size_fractional_search_range == 0 ,
+                radius_range = baseline_radius ;
+            else
+                radius_min = round(baseline_radius*min_fractional_arena_size) ;
+                radius_max = round(baseline_radius*max_fractional_arena_size) ;
+                radius_range = radius_min:radius_max;
+            end
         else
             radius_max = round(min(split_rows,split_cols)*.6);
             radius_min = round(radius_max*.6);
@@ -107,15 +125,20 @@ function [centers, r, w, h] = calib_chamber_detect(bg, n_chambers, shape, r, w, 
         % set default output values for width and height
         w = []; h = [];
     else
-        if nargin > 5 && ~isempty(w) && ~isempty(h)
-            width_range = round(w/scale);
-            height_range = round(h/scale);            
-            width_min = round(width_range*0.9);
-            width_max = round(width_range*1.1);
-            width_range = width_min:width_max;            
-            height_min = round(height_range*0.9);
-            height_max = round(height_range*1.1);
-            height_range = height_min:height_max;
+        if ~isempty(w) && ~isempty(h)
+            baseline_width = round(w/scale);
+            baseline_height = round(h/scale);            
+            if arena_size_fractional_search_range == 0 ,
+                width_range = baseline_width ;
+                height_range = baseline_height ;
+            else
+                width_min = round(baseline_width*min_fractional_arena_size);
+                width_max = round(baseline_width*max_fractional_arena_size);
+                width_range = width_min:width_max;
+                height_min = round(baseline_height*min_fractional_arena_size);
+                height_max = round(baseline_height*max_fractional_arena_size);
+                height_range = height_min:height_max;
+            end
         else
             width_max = round(split_cols);
             width_min = round(width_max*.7);
@@ -130,7 +153,7 @@ function [centers, r, w, h] = calib_chamber_detect(bg, n_chambers, shape, r, w, 
     end
 
     % Search for optimal chamber dimensions
-    if CIRCULAR
+    if is_arena_circular
         max_responses = zeros(1,numel(radius_range));
         count = 0;
         for r=radius_range
@@ -227,7 +250,7 @@ function [centers, r, w, h] = calib_chamber_detect(bg, n_chambers, shape, r, w, 
         [~,idx] = max(response(pixels)); idx = idx(1);
         [y,x] = ind2sub(size(response),pixels(idx)); center = [y x];    
         % set max distance between two chambers
-        min_dist = fif(CIRCULAR, 2*r, min(w,h)) ;
+        min_dist = fif(is_arena_circular, 2*r, min(w,h)) ;
         % ignore responses that overlap with existing chambers
         dist = bwdist(chamber_im);
         if dist(center(1),center(2)) < min_dist
