@@ -56,4 +56,7 @@ function test_calib_chamber_detect()
     if ~isequal(r, r_target) ,
         error('Fit radius is wrong.  Should be %s, but is %s', mat2str(r_target), mat2str(r)) ;
     end
+
+    % Declare victory
+    fprintf('%s() passed.\n', mfilename()) ;
 end
