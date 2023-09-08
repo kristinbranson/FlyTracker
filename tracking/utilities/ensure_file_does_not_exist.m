@@ -6,7 +6,8 @@ function ensure_file_does_not_exist(raw_file_path)
     if isempty(file_path) ,
         error('File path cannot be empty') ;
     elseif exist(file_path, 'file') ,
-        system_from_list_with_error_handling({'rm', '-f', file_path}) ;
+        %system_from_list_with_error_handling({'rm', '-f', file_path}) ;
+        delete(file_path) ;
     else
         % do nothing, all is well
     end

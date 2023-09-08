@@ -1,3 +1,3 @@
 function result = flytracker_version_string()
-    result = '1.1.2' ;
+    result = '1.2.1' ;
 end

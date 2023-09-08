@@ -130,22 +130,23 @@ function writeJAABA(trkname,moviename,trk,feat,calib,expdir)
           dosoftlink = false;
         end
       elseif ispc,
-        if exist([moviefile,'.lnk'],'file')
-          delete([moviefile,'.lnk']);
-        end
-        cmd = sprintf('mkshortcut.vbs /target:"%s" /shortcut:"%s"',inmoviefile,moviefile);
-        fprintf('Making a Windows shortcut file at "%s" with target "%s"\n',inmoviefile,moviefile);
-        system(cmd);
-        % test to make sure that worked
-        if ~exist(moviefile,'file')
-            % try a different softlink method
-            cmd = sprintf('mklink %s %s',moviefile,inmoviefile);
-            system(cmd);
-            % test to make sure that worked
-            if ~exist(moviefile,'file')
-                dosoftlink = false;
-            end
-        end
+        dosoftlink = false;  % none of the code below seems to work, so just give up for now       
+%         if exist([moviefile,'.lnk'],'file')
+%           delete([moviefile,'.lnk']);
+%         end
+%         cmd = sprintf('tracking\\utilities\\mkshortcut.vbs /target:"%s" /shortcut:"%s"',inmoviefile,moviefile);
+%         fprintf('Making a Windows shortcut file at "%s" with target "%s"\n',inmoviefile,moviefile);
+%         system(cmd);
+%         % test to make sure that worked
+%         if ~exist(moviefile,'file')
+%           % try a different softlink method
+%           cmd = sprintf('mklink %s %s',moviefile,inmoviefile);
+%           system(cmd);
+%           % test to make sure that worked
+%           if ~exist(moviefile,'file')
+%             dosoftlink = false;
+%           end
+%         end
       else
         dosoftlink = false;
       end  
