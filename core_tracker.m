@@ -188,36 +188,32 @@ function core_tracker(output_track_file_name, ...
         error('Input calibration file (%s) does not exist', input_calibration_file_path) ;
     end
     
-%     % Make sure corresponding input, output calbration files are distinct
-%     if logical(exist(output_calibration_file_path, 'file')) ,
-%         canonical_input_calibration_file_path = realpath(input_calibration_file_path) ;
-%         canonical_output_calibration_file_path = realpath(output_calibration_file_path) ;
-%         if strcmp(canonical_input_calibration_file_path, canonical_output_calibration_file_path) ,
-%             error('Output calibration file path ("%s") must be different from input calibration file path ("%s")', ...
-%                   output_calibration_file_path, ...
-%                   input_calibration_file_path) ;
-%         end
-%     end
+    % Make sure corresponding input, output calbration files are distinct
+    if logical(exist(output_calibration_file_path, 'file')) ,
+        if strcmp(input_calibration_file_path, output_calibration_file_path) ,
+            error('Output calibration file path ("%s") must be different from input calibration file path ("%s")', ...
+                  output_calibration_file_path, ...
+                  input_calibration_file_path) ;
+        end
+    end
 
-%     % Check the input/output background paths
-%     if isempty(input_background_file_path) ,
-%         % this is ok, in principle
-%     else
-%         if ~logical(exist(input_background_file_path, 'file')) ,
-%             error('Input background file (%s) does not exist', input_background_file_path) ;
-%         end
-%         % If we get to here, input background file was specified and exists
-%         if exist(output_background_file_path, 'file') ,
-%             % Both input and output files exist, so make sure they're distinct
-%             canonical_input_background_path = realpath(input_background_path) ;
-%             canonical_output_background_path = realpath(output_background_path) ;
-%             if strcmp(canonical_input_background_path, canonical_output_background_path) ,
-%                 error('Output background file path ("%s") must be different from input background file path ("%s")', ...
-%                       output_background_file_path, ...
-%                       input_background_file_path) ;
-%             end
-%         end
-%     end       
+    % Check the input/output background paths
+    if isempty(input_background_file_path) ,
+        % this is ok, in principle
+    else
+        if ~logical(exist(input_background_file_path, 'file')) ,
+            error('Input background file (%s) does not exist', input_background_file_path) ;
+        end
+        % If we get to here, input background file was specified and exists
+        if exist(output_background_file_path, 'file') ,
+            % Both input and output files exist, so make sure they're distinct
+            if strcmp(input_background_path, output_background_path) ,
+                error('Output background file path ("%s") must be different from input background file path ("%s")', ...
+                      output_background_file_path, ...
+                      input_background_file_path) ;
+            end
+        end
+    end       
         
     % make sure we don't try to use more workers than available
     working_options.num_cores = set_up_parpool_for_flytracker(working_options) ;
