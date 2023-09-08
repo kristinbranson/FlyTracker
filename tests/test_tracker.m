@@ -8,9 +8,9 @@ function test_tracker()
 
     % Delete the input folder, re-copy from read-only version
     if exist(working_folder_name, 'file') ,
-        system_from_list_with_error_handling({'rm', '-rf', working_folder_name}) ;
+        rmdir(working_folder_name, 's')
     end
-    system_from_list_with_error_handling({'cp', '-R', '-T', read_only_input_folder_name, working_folder_name}) ;
+    copyfile(read_only_input_folder_name, working_folder_name)
     
     output_folder_name = fullfile(working_folder_name, 'test_tracker_output') ;
     calibration_file_name = fullfile(working_folder_name, 'calibration.mat') ;
