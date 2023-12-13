@@ -2760,16 +2760,17 @@ function saved = saveTrk(~,~)
         f_vid = fullfile(vinfo.filename);
         f_res = fullfile(files.path,files.trk);
         f_calib = fullfile(files.video_dir,'calibration.mat');
-        options.save_JAABA = 0;
-        tmp = dir(fullfile(files.path,'*JAABA'));
-        if numel(tmp) > 0
-            options.save_JAABA = 1;
-        end
-        tmp = dir(fullfile(files.path,'*trackfeat*'));
-        options.save_xls = numel(tmp) > 0;
-        % recompute features and jaaba
-        recompute = 1;
-        tracker_job_features(f_vid, f_res, f_calib, options, recompute);  % TODO: replace with core_tracker_compute_features() wrapper       
+        output_feature_file_path = fullfile(files.path, files.feat) ;
+        % Determine whether to recompute the JAABA features, and where to save them
+        [options.save_JAABA, output_jaaba_folder_path] = ...
+            determine_whether_to_recompute_feature_type('JAABA', '*JAABA', files.path) ;
+        % Determine whether to recompute the JAABA features, and where to save them
+        [options.save_xls, output_features_csv_folder_path] = ...
+            determine_whether_to_recompute_feature_type('.csv', '*trackfeat*', files.path) ;
+        % Recompute features, jaaba, and csv
+        tracker_job_features(output_feature_file_path, output_jaaba_folder_path, output_features_csv_folder_path, ...
+                             f_vid, f_res, f_calib, ...
+                             options) ;
         % load the new features
         D = load(fullfile(files.path,files.feat)); feat = D.feat;
         delete(h)
