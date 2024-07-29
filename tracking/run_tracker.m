@@ -78,17 +78,17 @@ function run_tracker(videos_struct, options, input_calibration_file_name, vinfo_
         assert(logical(exist(input_video_file_path, 'file'))) ;
         output_folder_path = get_single_video_output_folder_path(input_video_file_path, options, videos_struct);
         input_background_file_path = '' ;
-        output_track_file_path = fullfile(output_folder_path, strcat(input_video_file_base_name, '-track.mat')) ;
-        output_background_file_path  = fullfile(output_folder_path, strcat(input_video_file_base_name, '-bg.mat'));
-        output_calibration_file_path = fullfile(output_folder_path, strcat(input_video_file_base_name, '-calibration.mat'));
-        output_features_file_path = fullfile(output_folder_path, strcat(input_video_file_base_name, '-feat.mat')) ;
-        output_features_csv_folder_path = fullfile(output_folder_path, strcat(input_video_file_base_name, '-trackfeat.csv')) ;
-        output_jaaba_folder_path = fullfile(output_folder_path, strcat(input_video_file_base_name, '_JAABA')) ;
-        output_segmentation_file_path = fullfile(output_folder_path, strcat(input_video_file_base_name, '-seg.mat')) ;
+        output_track_file_path = fullfile(output_folder_path, horzcat(input_video_file_base_name, '-track.mat')) ;
+        output_background_file_path  = fullfile(output_folder_path, horzcat(input_video_file_base_name, '-bg.mat'));
+        output_calibration_file_path = fullfile(output_folder_path, horzcat(input_video_file_base_name, '-calibration.mat'));
+        output_features_file_path = fullfile(output_folder_path, horzcat(input_video_file_base_name, '-feat.mat')) ;
+        output_features_csv_folder_path = fullfile(output_folder_path, horzcat(input_video_file_base_name, '-trackfeat.csv')) ;
+        output_jaaba_folder_path = fullfile(output_folder_path, horzcat(input_video_file_base_name, '_JAABA')) ;
+        output_segmentation_file_path = fullfile(output_folder_path, horzcat(input_video_file_base_name, '-seg.mat')) ;
         output_options_file_path = fullfile(output_folder_path,[input_video_file_base_name,'-params.mat']);
         
         % display progress
-        input_video_file_leaf_name = strcat(input_video_file_base_name, ext) ;
+        input_video_file_leaf_name = horzcat(input_video_file_base_name, ext) ;
         waitstr = ['Processing ' input_video_file_leaf_name ...
             '   (movie ' num2str(input_video_index) '/' num2str(input_video_count) ')'];
         if do_use_display ,

@@ -12,13 +12,13 @@ function simple_noninteractive_flytracker(output_folder_name, input_video_file_n
     % Synthesize full paths for all the inputs and outputs
     [~, input_video_file_base_name] = fileparts(input_video_file_name) ;
     output_folder_path = absolute_filename_passing_empty(output_folder_name) ;
-    output_track_file_path = fullfile(output_folder_path, strcat(input_video_file_base_name, '-track.mat')) ;
-    output_background_file_path  = fullfile(output_folder_path, strcat(input_video_file_base_name, '-bg.mat'));
-    output_calibration_file_path = fullfile(output_folder_path, strcat(input_video_file_base_name, '-calibration.mat'));
-    output_features_file_path = fullfile(output_folder_path, strcat(input_video_file_base_name, '-feat.mat')) ;
-    output_features_csv_folder_path = fullfile(output_folder_path, strcat(input_video_file_base_name, '-trackfeat.csv')) ;
-    output_jaaba_folder_path = fullfile(output_folder_path, strcat(input_video_file_base_name, '_JAABA')) ;
-    output_segmentation_file_path = fullfile(output_folder_path, strcat(input_video_file_base_name, '-seg.mat')) ;
+    output_track_file_path = fullfile(output_folder_path, horzcat(input_video_file_base_name, '-track.mat')) ;
+    output_background_file_path  = fullfile(output_folder_path, horzcat(input_video_file_base_name, '-bg.mat'));
+    output_calibration_file_path = fullfile(output_folder_path, horzcat(input_video_file_base_name, '-calibration.mat'));
+    output_features_file_path = fullfile(output_folder_path, horzcat(input_video_file_base_name, '-feat.mat')) ;
+    output_features_csv_folder_path = fullfile(output_folder_path, horzcat(input_video_file_base_name, '-trackfeat.csv')) ;
+    output_jaaba_folder_path = fullfile(output_folder_path, horzcat(input_video_file_base_name, '_JAABA')) ;
+    output_segmentation_file_path = fullfile(output_folder_path, horzcat(input_video_file_base_name, '-seg.mat')) ;
     output_options_file_path = fullfile(output_folder_path,[input_video_file_base_name,'-params.mat']);
     input_video_file_path = absolute_filename_passing_empty(input_video_file_name) ;
     input_calibration_file_path = absolute_filename_passing_empty(input_calibration_file_name) ;

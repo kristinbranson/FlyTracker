@@ -6,7 +6,7 @@ function test_all(do_try)
     end
     
     % get the name of all the test functions
-    this_script_file_path = strcat(mfilename('fullpath'), '.m') ;
+    this_script_file_path = horzcat(mfilename('fullpath'), '.m') ;
     [this_script_folder_path, this_script_file_name] = fileparts2(this_script_file_path) ;
     raw_test_file_names = simple_dir(fullfile(this_script_folder_path,'*.m')) ;
     test_file_names = setdiff(raw_test_file_names, this_script_file_name) ;
