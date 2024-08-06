@@ -36,6 +36,13 @@ function [im,id] = video_read_frame(vinfo, id)
    elseif (strcmp(vinfo.type,'ufmf'))
       im = ufmf_read_frame(vinfo.ufmf, id+1);
       im = double(im)/255;
+   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+   %%% .sbfmf format (requires JAABA or Ctrax to be installed)
+   %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%      
+   elseif (strcmp(vinfo.type,'sbfmf'))
+      [im,timestamp] = sbfmfreadframe(id+1,vinfo.sbfmf.fid,vinfo.sbfmf.frame2file,vinfo.sbfmf.bgcenter);
+      im = double(im)/255;
+   
    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   
    %%% standard video format, read by VideoReader
    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%      

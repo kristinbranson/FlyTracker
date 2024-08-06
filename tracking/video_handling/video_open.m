@@ -61,6 +61,32 @@ function vinfo = video_open(filename, cache_size)
       vinfo.sx = vinfo.ufmf.nc;
       vinfo.sy = vinfo.ufmf.nr;
       vinfo.sz = 1;
+   elseif numel(filename) > 6 && strcmp(filename((end-5):end),'.sbfmf')
+      % store name and type
+      vinfo.filename = filename;
+      vinfo.type = 'sbfmf';
+      % read file
+      vinfo.sbfmf = struct;
+      [vinfo.sbfmf.nr,vinfo.sbfmf.nc,vinfo.sbfmf.nframes,...
+        vinfo.sbfmf.bgcenter,vinfo.sbfmf.bgstd,vinfo.sbfmf.frame2file] = ...
+        sbfmf_read_header(filename);
+      vinfo.sbfmf.fid = fopen(filename);
+      % store number of frames
+      vinfo.n_frames = vinfo.sbfmf.nframes;
+      % sample some frames to estimate frame rate
+      if vinfo.n_frames == 1,
+        vinfo.fps = 30; % just set to something if only one frame
+      else
+        [~,tstart] = sbfmfreadframe(1,vinfo.sbfmf.fid,vinfo.sbfmf.frame2file,vinfo.sbfmf.bgcenter);
+        [~,tend] = sbfmfreadframe(vinfo.n_frames,vinfo.sbfmf.fid,vinfo.sbfmf.frame2file,vinfo.sbfmf.bgcenter);
+        vinfo.fps = (vinfo.n_frames-1)/(tend-tstart);
+      end
+      % store frame size
+      vinfo.sx = vinfo.sbfmf.nc;
+      vinfo.sy = vinfo.sbfmf.nr;
+      vinfo.sz = 1;
+
+
    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%   
    %%% standard video format
    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
