@@ -24,7 +24,7 @@ function core_core_tracker(output_track_file_path, ...
         scratch_folder_path = get_scratch_folder_path() ;
         temp_track_folder_path = tempname(scratch_folder_path) ;
     else
-        temp_track_folder_path = strcat(output_track_file_path, '.intermediates') ;
+        temp_track_folder_path = horzcat(output_track_file_path, '.intermediates') ;
     end
     
     % If forced, delete any old temporary folder, if it exists
