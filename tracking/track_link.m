@@ -347,16 +347,19 @@ function trks = track_link(trks,calib)
         end
 
         obj_list = zeros(duration,1);
+        appearancecost = nan(2,duration);
         track    = nan(duration,size(trks.sequences{1}.track,2));
         for i=1:numel(trajectories{t})
             seq_id = trajectories{t}(i);
             time_start = trks.sequences{seq_id}.time_start - sequence.time_start + 1;
             time_end = time_start+numel(trks.sequences{seq_id}.obj_list)-1;
             obj_list(time_start:time_end) = trks.sequences{seq_id}.obj_list;
+            appearancecost(:,time_start:time_end) = trks.sequences{seq_id}.appearancecost;
             track(time_start:time_end,:) = trks.sequences{seq_id}.track;
         end
         sequence.obj_list = obj_list;
-        sequence.track = track;        
+        sequence.track = track;   
+        sequence.appearancecost = appearancecost;
         sequences{t,1} = sequence;
     end
     trks.sequences = sequences;
@@ -371,6 +374,10 @@ function trks = track_link(trks,calib)
     
     % flag potential swaps based on stitch information
     trks.flags = flag_swaps(trks);
+
+    % update orientations again after linking
+    trks = track_choose_orientations(trks,calib);
+
 end
 
 function cost_mx = get_cost(trks,froms,tos,params)

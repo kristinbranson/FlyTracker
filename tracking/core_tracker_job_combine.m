@@ -90,6 +90,7 @@ function success = core_tracker_job_combine(output_per_chamber_track_file_name, 
   trk.frame_ids      = trk.frame_ids(1:n_frm);  
   trk.frame_seq_list = trk.frame_seq_list(1:n_frm);
   trk.sequences      = trk.sequences(1:n_seq);
+  trk.names = trk_curr.names;
   if save_seg 
       frame_data = frame_data(1:n_frm);
   end
@@ -124,7 +125,6 @@ function success = core_tracker_job_combine(output_per_chamber_track_file_name, 
   % gather sequences to data matrix
   n_objs = numel(trk.sequences);
   n_frames = numel(trk.frame_ids);
-  trk.names = trk_curr.names;
   n_feats = numel(trk.names);  
   trk.data = nan(n_objs,n_frames,n_feats);
   for s=1:n_objs

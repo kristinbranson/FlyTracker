@@ -743,10 +743,11 @@ function trks = track_segment(trks, calib, show_progress, chamber_str, options)
           if trust_vel,
             appearancecost(2,fr) = appearancecost(2,fr)+1; % always prefer not to flip
           end
-          weight_theta = nan(size(orientations{s}));
-          weight_theta(:) = params.choose_orientations_weight_theta;
         end
+        weight_theta = nan(size(orientations{s}));
+        weight_theta(:) = params.choose_orientations_weight_theta;
         [new_orientations{s},flipidx{s}] = choose_orientations_generic(orientations{s},weight_theta,appearancecost);
+        trks.sequences{s}.appearancecost = appearancecost;
         
       end
       

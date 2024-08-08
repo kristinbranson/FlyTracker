@@ -58,8 +58,13 @@ for t = 2:N,
     for sprev = 1:2,
       
       thetaprev = theta(t-1) + (sprev-1)*pi;
-      costcurr = weight_theta(t)*angledist(thetaprev,thetacurr) + ...
-        appearancecost(scurr,t);
+      isangledist = ~isnan(thetacurr) && ~isnan(thetaprev);
+      if isangledist,
+        costcurr = weight_theta(t)*angledist(thetaprev,thetacurr) + ...
+          appearancecost(scurr,t);
+      else
+        costcurr = appearancecost(scurr,t);
+      end
       tmpcost(sprev) = costprev(sprev) + costcurr;
       
     end
