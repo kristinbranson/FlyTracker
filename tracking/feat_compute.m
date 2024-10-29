@@ -22,19 +22,15 @@
 %
 % All features are computed to be independent of resolution (FPS,PPM)
 %
-function feat = feat_compute(trk, calib)
+function feat = feat_compute(trk, calib, do_compute_relative)
+    if ~exist('do_compute_relative', 'var') || isempty(do_compute_relative) ,
+      do_compute_relative = true ;  % true for backwards-compatibility
+    end
     % store video resolution parameters for later normalization
     pix_per_mm = calib.PPM;
     FPS = calib.FPS;
-    % names of features to be computed
-    personal_feat = {'vel','ang_vel','min_wing_ang','max_wing_ang',...
-                     'mean_wing_length','axis_ratio','fg_body_ratio','contrast'};
-    enviro_feat   = {'dist_to_wall'};
-    relative_feat = {'dist_to_other','angle_between','facing_angle','leg_dist'};         
-    % units of features to be computed
-    personal_units = {'mm/s','rad/s','rad','rad','mm','ratio','ratio',''};
-    enviro_units = {'mm'};
-    relative_units = {'mm','rad','rad','mm'};
+    % names, units of features to be computed
+    [personal_feat, enviro_feat, relative_feat, personal_units, enviro_units, relative_units] = feat_names_and_units() ;
     % kernel for smoothing output    
     smooth_kernel = [1 2 1]/4;
     % note which flies share a chamber ("buddies") to keep track of whether 
@@ -46,7 +42,7 @@ function feat = feat_compute(trk, calib)
             obj_count(c) = numel(trk.flies_in_chamber{c});
         end
         n_objs = max(obj_count);
-        if n_objs == 2
+        if do_compute_relative && (n_objs == 2)
             buddy = zeros(1,n_flies);
             for i=1:numel(trk.flies_in_chamber)
                 flies = trk.flies_in_chamber{i};
@@ -59,7 +55,7 @@ function feat = feat_compute(trk, calib)
         end
     else
         n_objs = n_flies;
-        if n_objs == 2
+        if do_compute_relative && (n_objs == 2)
             buddy = [2 1];
             bud_complete = false(size(buddy));
         end
@@ -67,7 +63,7 @@ function feat = feat_compute(trk, calib)
     % initialize features
     n_frames = size(trk.data,2);
     n_trkfeat = size(trk.data,3);
-    n_feats = numel(personal_feat) + (n_objs==2)*numel(relative_feat) + numel(enviro_feat);
+    n_feats = numel(personal_feat) + do_compute_relative*(n_objs==2)*numel(relative_feat) + numel(enviro_feat);
     track = trk.data(:,:,:);
     features = nan(n_flies,n_frames,n_feats);    
     % compute distance to chambers for all pixels
@@ -168,7 +164,7 @@ function feat = feat_compute(trk, calib)
         %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
         center = [track(s,:,1)' track(s,:,2)'];
         vec_rot = [cos(ori)' -sin(ori)'];
-        if n_objs==2
+        if do_compute_relative && n_objs==2
             if bud_complete(s), continue; end % only need to calculate these once
             bud = buddy(s);
             if bud==0, continue; end % this fly has no buddy
@@ -213,7 +209,7 @@ function feat = feat_compute(trk, calib)
     % store variables in feat structure
     names = [personal_feat enviro_feat];   
     units = [personal_units enviro_units];
-    if n_objs==2
+    if do_compute_relative && n_objs==2
         names = [names relative_feat];
         units = [units relative_units];
     end

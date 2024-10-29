@@ -24,4 +24,5 @@ function options = tracker_default_options()
     options.do_recompute_tracking = false ;
     options.min_fractional_arena_size = 0.9 ;
     options.max_fractional_arena_size = 1.1 ;
+    options.do_compute_relative_features = true ;
 end
