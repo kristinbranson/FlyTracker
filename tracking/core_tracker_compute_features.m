@@ -28,8 +28,8 @@ function core_tracker_compute_features(output_feature_file_name, output_features
   % write JAABA folders
   if options.save_JAABA
       % augment features (with log, norms, and derivatives)
-      aug_feat = feat_augment(feat);
-      writeJAABA(input_tracking_file_name, input_video_file_name, trk, aug_feat, calibration, output_jaaba_folder_name) ;
+      writeJAABA(input_tracking_file_name, input_video_file_name, trk, feat, calibration, output_jaaba_folder_name, ...
+                 options.save_JAABA_trk_mat_file, options.save_JAABA_perframe_features, options.save_JAABA_movie_link_or_copy) ;
   end
  
 end
