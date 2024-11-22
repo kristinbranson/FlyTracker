@@ -122,8 +122,8 @@ function core_tracker(output_track_file_name, ...
     %                         circular arena is automatically detected, overriding
     %                         any value provided in input_calibration_file_name.
     %                         (default: [])
-    %       n_flies         - Number of flies.  If non-empty, overrides number of flies given 
-    %                         in input_calibration_file_name.  (default: [])
+    %       n_flies         - Number of flies per chamber.  If non-empty, overrides number of 
+    %                         flies given in input_calibration_file_name.  (default: [])
     %       n_flies_is_max  - Whether n_flies is an upper limit on the number
     %                         of flies or an actual count. (default: false)
     %       expdir_naming   - Not used by core_tracker().  Present only to keep
