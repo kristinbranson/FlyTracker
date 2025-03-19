@@ -239,6 +239,9 @@ function [centers, r, w, h] = calib_chamber_detect(bg, n_chambers, shape, r, w, 
     end
     [~,sort_ids] = sort(max_responses,'descend');
 
+    % Set max distance between two chambers
+    min_dist = fif(is_arena_circular, 2*r, min(w,h)) ;
+
     % Add chambers, one by one, starting with the most confident one
     centers = zeros(n_chambers,2);
     count = 0;
@@ -248,8 +251,6 @@ function [centers, r, w, h] = calib_chamber_detect(bg, n_chambers, shape, r, w, 
         pixels = cc.PixelIdxList{sort_ids(s)};
         [~,idx] = max(response(pixels)); idx = idx(1);
         [y,x] = ind2sub(size(response),pixels(idx)); center = [y x];    
-        % set max distance between two chambers
-        min_dist = fif(is_arena_circular, 2*r, min(w,h)) ;
         % ignore responses that overlap with existing chambers
         dist = bwdist(chamber_im);
         if dist(center(1),center(2)) < min_dist
@@ -285,7 +286,7 @@ function [centers, r, w, h] = calib_chamber_detect(bg, n_chambers, shape, r, w, 
         chamber_im(center(1),center(2)) = 1;
         % accept at most n_chambers responses
         if count==n_chambers
-            break;
+            break
         end
     end
 
