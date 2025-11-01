@@ -86,6 +86,10 @@ for i = 1:nflies,
 end
 units.num = {'rad'};
 units.den = cell(1,0);
+filecurr = fullfile(perframedir,[fn,'.mat']);
+if exist(filecurr,'file'),
+  delete(filecurr);
+end
 save(fullfile(perframedir,[fn,'.mat']),'data','units');
 
 % wing_angler <- -'wing r ang'
@@ -97,7 +101,11 @@ for i = 1:nflies,
 end
 units.num = {'rad'};
 units.den = cell(1,0);
-save(fullfile(perframedir,[fn,'.mat']),'data','units');
+filecurr = fullfile(perframedir,[fn,'.mat']);
+if exist(filecurr,'file'),
+  delete(filecurr);
+end
+save(filecurr,'data','units');
 
 % fakectrax: wing_arear <- 'wing r len'
 % ow: wing_lengthr <- wing r len
@@ -118,7 +126,11 @@ for i = 1:nflies,
   id = newid2oldid(i);
   data{i} = ftd.trk.data(id,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.(ffn));
 end
-save(fullfile(perframedir,[cfn,'.mat']),'data','units','notes');
+filecurr = fullfile(perframedir,[cfn,'.mat']);
+if exist(filecurr,'file'),
+  delete(filecurr);
+end
+save(filecurr,'data','units','notes');
 
 % fakectrax: wing_areal <- 'wing l len'
 % ow: wing_lengthl <- wing l len
@@ -139,6 +151,10 @@ for i = 1:nflies,
   id = newid2oldid(i);
   data{i} = ftd.trk.data(id,outtrx.trx(i).firstframe:outtrx.trx(i).endframe,fidx.(ffn));
 end
+filecurr = fullfile(perframedir,[cfn,'.mat']);
+if exist(filecurr,'file'),
+  delete(filecurr);
+end
 save(fullfile(perframedir,[cfn,'.mat']),'data','units','notes');
 
 % wing_trough_angle <- -( 'wing l ang' + 'wing r ang' ) / 2
@@ -151,6 +167,10 @@ for i = 1:nflies,
 end
 units.num = {'rad'};
 units.den = cell(1,0);
+filecurr = fullfile(perframedir,[cfn,'.mat']);
+if exist(filecurr,'file'),
+  delete(filecurr);
+end
 save(fullfile(perframedir,[cfn,'.mat']),'data','units');
 
 % n wings detected
@@ -162,6 +182,10 @@ data = nwingsdetected;
 % end
 units.num = {'unit'};
 units.den = cell(1,0);
+filecurr = fullfile(perframedir,[cfn,'.mat']);
+if exist(filecurr,'file'),
+  delete(filecurr);
+end
 save(fullfile(perframedir,[cfn,'.mat']),'data','units');
 
 end
