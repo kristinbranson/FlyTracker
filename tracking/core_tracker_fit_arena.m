@@ -21,12 +21,18 @@ function output_calibration = core_tracker_fit_arena(output_calibration_file_nam
         shape = 'circular';
     end
     % find new chambers and update structure
-    [centers, r, w, h] = calib_chamber_detect(bg, working_calibration.n_chambers, ...
+    n_chambers_nominal = working_calibration.n_chambers ;
+    [centers, r, w, h] = calib_chamber_detect(bg, n_chambers_nominal, ...
                                               shape, working_calibration.r, working_calibration.w, working_calibration.h, ...
                                               options);
     if numel(centers)==1 && ~centers
         error('Calibration failed') ;
     end
+    n_chambers_found = size(centers,1) ;
+    if n_chambers_found ~= n_chambers_nominal
+      error('Calibration failed: Found %d chamber(s) when doing calibration, but there should be %d chamber(s).', n_chambers_found, n_chambers_nominal) ;
+    end
+
     working_calibration.centroids = centers;
     working_calibration.r = r;
     working_calibration.w = w;
