@@ -2743,6 +2743,7 @@ function saved = saveTrk(~,~)
             return
         end
         h = customDialog('wait','Recomputing derived files...',12*fig.fs);
+        cleaner = onCleanup(@()(delete(h))) ;
         % save trk
         save(fullfile(files.path,files.trk),'trk')
         % update segmentation if it exists
@@ -2754,14 +2755,29 @@ function saved = saveTrk(~,~)
             save(fullfile(files.path,segfile),'seg')
         end
         % delete temp swap file
-        delete(fullfile(files.path,files.swap));
+        swap_file_path = fullfile(files.path,files.swap) ;
+        if exist(swap_file_path, 'file')
+          delete(swap_file_path);
+        end
         swap.swaps = zeros(size(swap.swaps));
         % write and save features, JAABA files and .xls
         f_vid = fullfile(vinfo.filename);
         f_res = fullfile(files.path,files.trk);
         f_calib = fullfile(files.video_dir,'calibration.mat');
+        if ~exist(f_calib, 'file')
+            f_calib_name = sprintf('%s-calibration.mat', files.trk(1:end-10)) ;
+            f_calib = fullfile(files.path, f_calib_name) ;
+            if ~exist(f_calib, 'file')
+              customDialog('warn','Unable to find calibration file---not recomputing derived files.',12*fig.fs);
+              return
+            end
+        end
         output_feature_file_path = fullfile(files.path, files.feat) ;
         % Determine whether to recompute the JAABA features, and where to save them
+        params_file_name = sprintf('%s-params.mat', files.trk(1:end-10)) ;
+        params_file_path = fullfile(files.path, params_file_name) ;
+        input_options = load_anonymous(params_file_path) ;
+        options = sanitize_tracker_options(input_options) ;
         [options.save_JAABA, output_jaaba_folder_path] = ...
             determine_whether_to_recompute_feature_type('JAABA', '*JAABA', files.path) ;
         % Determine whether to recompute the JAABA features, and where to save them
@@ -2773,7 +2789,6 @@ function saved = saveTrk(~,~)
                              options) ;
         % load the new features
         D = load(fullfile(files.path,files.feat)); feat = D.feat;
-        delete(h)
         set(handles.save_swaps_h,'enable','off')        
         updateDisplay(state.curr_frame);
     end
